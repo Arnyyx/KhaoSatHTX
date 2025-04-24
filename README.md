@@ -1,8 +1,12 @@
-
-Setup FrontEnd
+Setup Frontend
 npx create-next-app@latest
 npx shadcn@latest init
 npx shadcn@latest add alert avatar badge button card dialog input label radio-group select switch table tabs
+
+
+Setup Backend
+npm init -y
+npm install express mssql dotenv
 
 Setup Database
 -- Tạo database
