@@ -1,12 +1,12 @@
 Setup Frontend
 npx create-next-app@latest
 npx shadcn@latest init
-npx shadcn@latest add alert avatar badge button card dialog input label radio-group select switch table tabs
+npx shadcn@latest add alert avatar badge button card dialog input label radio-group select switch table tabs skeleton textarea checkbox sonner
 
 
 Setup Backend
 npm init -y
-npm install express mssql dotenv
+npm install express mssql dotenv cors
 
 Setup Database
 -- Tạo database
@@ -45,6 +45,7 @@ CREATE TABLE Users (
     Id INT PRIMARY KEY IDENTITY,
     Username NVARCHAR(50) NOT NULL,
     Password NVARCHAR(255) NOT NULL,
+    NAME NVARCHAR(255),
     Role NVARCHAR(20) CHECK (Role IN ('admin', 'HTX', 'QTD', 'LMHTX')) NOT NULL,
     Email NVARCHAR(100) NOT NULL,
     Type NVARCHAR(10) CHECK (Type IN ('NN', 'PNN')) NOT NULL,
