@@ -6,6 +6,9 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 
+const provincesMld = require('./Modules/ProvincesModule.js');
+app.use('/provinces',provincesMld);
+
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 app.get('/users', async (req, res) => {
@@ -19,7 +22,7 @@ app.get('/users', async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
+const port = 5000;
 app.listen(port, () => {
   console.log(`🚀 Server is running on http://localhost:${port}`);
 });

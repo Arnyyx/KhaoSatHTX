@@ -26,6 +26,9 @@ export default function HomePage() {
         <Link href="/union">
           <Button variant="outline">Liên minh HTX</Button>
         </Link>
+        <Link href="/provinces">
+          <Button variant="outline">Tỉnh/Thành phố</Button>
+        </Link>
       </div>
     </main>
   )
