@@ -7,8 +7,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const provincesMld = require('./Modules/ProvincesModule.js');
+const provincesMld = require('./routes/ProvincesModule.js');
 app.use('/provinces',provincesMld);
+const districtsMld = require('./routes/DistrictsModule.js');
+app.use('/districts',districtsMld);
 
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
