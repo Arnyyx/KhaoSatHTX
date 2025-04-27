@@ -153,6 +153,7 @@ export default function AdminPage() {
                             <TabsTrigger value="users">Người dùng</TabsTrigger>
                             <TabsTrigger value="surveys">Khảo sát</TabsTrigger>
                             <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
+                            <TabsTrigger value="address">Địa chỉ</TabsTrigger>
                         </TabsList>
 
                         {/* Tab Báo cáo */}
@@ -553,6 +554,16 @@ export default function AdminPage() {
                                             </TableBody>
                                         </Table>
                                     </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                        <TabsContent value="address">
+                            <Card>
+                                <CardContent className="p-6">
+                                    <h2 className="text-xl font-semibold mb-4">Địa chỉ</h2>
+                                    <Link href="/provinces">
+                                        <Button variant="outline">Tỉnh/Thành phố</Button>
+                                    </Link>
                                 </CardContent>
                             </Card>
                         </TabsContent>
