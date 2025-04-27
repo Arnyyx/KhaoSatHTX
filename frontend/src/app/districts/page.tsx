@@ -35,6 +35,7 @@ type ValuePair = {
 export default function InfoTablePage() {
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
     const [valuePairList, setValuePairList] = useState<ValuePair[]>([])
+    const [oldName, setOldName] = useState("");
     const [infoFormData, setInfoFormData] = useState({
         ProvinceId: -1,
         Name: "",
@@ -46,6 +47,10 @@ export default function InfoTablePage() {
     });
     const [editMode, setEditMode] = useState(false);
     const [infoList, setInfoList] = useState<Info[]>([])
+    
+    const isNameDuplicate = (name: string): boolean => {
+        return infoList.some(item => item.Name.toLowerCase().trim() === name.toLowerCase().trim());
+    };
     
     const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -60,6 +65,14 @@ export default function InfoTablePage() {
     const handleInfoSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editMode) {
+            if (isNameDuplicate(editFormData.Name) && editFormData.Name !== oldName) {
+                alert("Tên quận/huyện đã tồn tại. Vui lòng nhập tên khác.");
+                return;
+            }
+            if (editFormData.ProvinceId === -1) {
+                alert("Vui lòng chọn tỉnh/thành phố.");
+                return;
+            }
             try {
                 const res = await fetch("http://localhost:5000/districts/sua", {
                     method: "POST",
@@ -73,13 +86,22 @@ export default function InfoTablePage() {
                     throw new Error("Failed to submit");
                 }
         
-                console.log("Submitted successfully", infoFormData);
+                console.log("Submitted successfully", editFormData);
                 window.location.reload();
                 setEditFormData({Id: -1, ProvinceId: -1, Name: ""});
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
         } else {
+            if (isNameDuplicate(infoFormData.Name)) {
+                alert("Tên quận/huyện đã tồn tại. Vui lòng nhập tên khác.");
+                return;
+            }
+            console.log(infoFormData.ProvinceId)
+            if (infoFormData.ProvinceId === -1) {
+                alert("Vui lòng chọn tỉnh/thành phố.");
+                return;
+            }
             try {
                 const res = await fetch("http://localhost:5000/districts", {
                     method: "POST",
@@ -111,6 +133,7 @@ export default function InfoTablePage() {
         }
     };
     const handleEditClick = (data: Info) => {
+        setOldName(data.Name); // Lưu tên cũ để so sánh
         setEditFormData(data); // Truyền thông tin vào form
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
@@ -162,7 +185,15 @@ export default function InfoTablePage() {
                 <CardContent className="p-6 space-y-4">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-xl font-semibold">Quản lý Quận/Huyện</h2>
-                        <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+                        <Dialog open={infoDialogOpen} onOpenChange={(isOpen) => {
+                            setInfoDialogOpen(isOpen)
+                            if (!isOpen) {
+                                setEditMode(false) // Đặt lại chế độ về thêm mới
+                                setInfoFormData({ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
+                                setEditFormData({Id: -1, ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
+                                setOldName("") // Đặt lại tên cũ
+                            }
+                        }}>
                             <DialogTrigger asChild>
                                 <Button>Thêm Quận/Huyện</Button>
                             </DialogTrigger>
@@ -175,6 +206,7 @@ export default function InfoTablePage() {
                                         <Label htmlFor="ProvinceId">Tỉnh/Thành phố</Label>
                                         <Select
                                             name="ProvinceId"
+                                            value={editMode ? String(editFormData.ProvinceId) : ""}
                                             onValueChange={(value) => commboBoxChange(value)}
                                         >
                                             <SelectTrigger>
@@ -195,14 +227,20 @@ export default function InfoTablePage() {
                                             value={editMode ? editFormData.Name : infoFormData.Name}
                                             onChange={handleInfoChange}
                                             required
-                                            placeholder="Nhập Vùng miền"
+                                            placeholder="Nhập tên Quận/Huyện"
                                         />
                                     </div>
                                     <div className="flex justify-end gap-2">
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() => setInfoDialogOpen(false)}
+                                            onClick={() => {
+                                                setInfoDialogOpen(false)
+                                                setEditMode(false) // Đặt lại chế độ về thêm mới
+                                                setInfoFormData({ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
+                                                setEditFormData({Id: -1, ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
+                                                setOldName("") // Đặt lại tên cũ
+                                            }}
                                         >
                                             Hủy
                                         </Button>
@@ -217,8 +255,8 @@ export default function InfoTablePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
-                                    <TableHead className="w-[300px]">Tên Quận/Huyện</TableHead>
-                                    <TableHead className="w-[200px]">Thuộc</TableHead>
+                                    <TableHead className="w-[300px]">Tên Quận/Huyện</TableHead> 
+                                    <TableHead className="w-[200px]">Thuộc Tỉnh/TP</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>

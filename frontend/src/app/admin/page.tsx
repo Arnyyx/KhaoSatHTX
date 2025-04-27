@@ -148,12 +148,12 @@ export default function AdminPage() {
                 <CardContent className="p-6">
                     <h1 className="text-2xl font-semibold mb-6">Quản trị hệ thống</h1>
                     <Tabs defaultValue="reports" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-5">
                             <TabsTrigger value="reports">Báo cáo</TabsTrigger>
                             <TabsTrigger value="users">Người dùng</TabsTrigger>
                             <TabsTrigger value="surveys">Khảo sát</TabsTrigger>
                             <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
-                            <TabsTrigger value="address">Địa chỉ</TabsTrigger>
+                            <TabsTrigger value="address">Đơn Vị Hành Chính</TabsTrigger>
                         </TabsList>
 
                         {/* Tab Báo cáo */}
@@ -560,12 +560,15 @@ export default function AdminPage() {
                         <TabsContent value="address">
                             <Card>
                                 <CardContent className="p-6">
-                                    <h2 className="text-xl font-semibold mb-4">Địa chỉ</h2>
-                                    <Link href="/provinces">
+                                    <h2 className="text-xl font-semibold mb-4">Quản lý Đơn Vị Hành Chính</h2>
+                                    <Link href="/provinces" className="mr-4">
                                         <Button variant="outline">Tỉnh/Thành phố</Button>
                                     </Link>
-                                    <Link href="/districts">
+                                    <Link href="/districts" className="mr-4">
                                         <Button variant="outline">Quận/Huyện</Button>
+                                    </Link>
+                                    <Link href="/wards" className="mr-4">
+                                        <Button variant="outline">Phường/Xã</Button>
                                     </Link>
                                 </CardContent>
                             </Card>

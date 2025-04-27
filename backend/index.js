@@ -11,6 +11,8 @@ const provincesMld = require('./routes/ProvincesModule.js');
 app.use('/provinces',provincesMld);
 const districtsMld = require('./routes/DistrictsModule.js');
 app.use('/districts',districtsMld);
+const wardsMld = require('./routes/WardsModule.js');
+app.use('/wards',wardsMld);
 
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
