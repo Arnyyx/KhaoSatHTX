@@ -2,13 +2,22 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogTrigger,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { API } from "@/lib/api"
 import { toast } from "sonner"
+import { ArrowUp, ArrowDown } from "lucide-react"
 
 interface Survey {
     Id: number
@@ -21,11 +30,16 @@ interface Survey {
 
 export default function SurveysPage() {
     const [surveys, setSurveys] = useState<Survey[]>([])
+    const [filteredSurveys, setFilteredSurveys] = useState<Survey[]>([])
     const [isOpen, setIsOpen] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [form, setForm] = useState<Partial<Survey>>({})
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [surveyToDelete, setSurveyToDelete] = useState<number | null>(null)
+    const [searchTerm, setSearchTerm] = useState("")
+    const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ended">("all")
+    const [sortField, setSortField] = useState<keyof Survey | null>(null)
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
     // Fetch surveys
     useEffect(() => {
@@ -38,10 +52,64 @@ export default function SurveysPage() {
             if (!res.ok) throw new Error("Failed to fetch surveys")
             const data = await res.json()
             setSurveys(data)
+            setFilteredSurveys(data)
         } catch (error) {
             toast.error("Không thể tải danh sách khảo sát", {
                 description: "Vui lòng thử lại sau",
             })
+        }
+    }
+
+    // Xử lý tìm kiếm, lọc, và sắp xếp
+    useEffect(() => {
+        let result = [...surveys]
+
+        // Tìm kiếm theo tiêu đề hoặc mô tả
+        if (searchTerm) {
+            result = result.filter(
+                (s) =>
+                    s.Title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.Description.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
+
+        // Lọc theo trạng thái
+        if (statusFilter !== "all") {
+            result = result.filter((s) => s.Status === (statusFilter === "active"))
+        }
+
+        // Sắp xếp
+        if (sortField) {
+            result.sort((a, b) => {
+                let valueA = a[sortField]
+                let valueB = b[sortField]
+
+                if (sortField === "StartTime" || sortField === "EndTime") {
+                    valueA = new Date(valueA).getTime()
+                    valueB = new Date(valueB).getTime()
+                } else if (sortField === "Status") {
+                    valueA = valueA ? 1 : 0
+                    valueB = valueB ? 1 : 0
+                } else {
+                    valueA = valueA.toString().toLowerCase()
+                    valueB = valueB.toString().toLowerCase()
+                }
+
+                if (valueA < valueB) return sortOrder === "asc" ? -1 : 1
+                if (valueA > valueB) return sortOrder === "asc" ? 1 : -1
+                return 0
+            })
+        }
+
+        setFilteredSurveys(result)
+    }, [searchTerm, statusFilter, sortField, sortOrder, surveys])
+
+    const handleSort = (field: keyof Survey) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+        } else {
+            setSortField(field)
+            setSortOrder("asc")
         }
     }
 
@@ -58,7 +126,7 @@ export default function SurveysPage() {
             description: form.Description,
             startTime: new Date(form.StartTime).toISOString(),
             endTime: new Date(form.EndTime).toISOString(),
-            status: form.Status ?? true, // Đặt mặc định là true nếu Status là undefined
+            status: form.Status ?? true,
         }
 
         try {
@@ -109,7 +177,7 @@ export default function SurveysPage() {
                     <DialogTrigger asChild>
                         <Button
                             onClick={() => {
-                                setForm({ Status: true }) // Đặt mặc định Status là true (Hoạt động)
+                                setForm({ Status: true })
                                 setIsEditing(false)
                                 setIsOpen(true)
                             }}
@@ -169,47 +237,119 @@ export default function SurveysPage() {
                 </Dialog>
             </div>
 
-            <div className="grid gap-4">
-                {surveys.map((s) => (
-                    <Card key={s.Id}>
-                        <CardContent className="p-4 flex justify-between items-center">
-                            <div>
-                                <h2 className="font-semibold text-lg">{s.Title}</h2>
-                                <p className="text-sm text-muted-foreground">{s.Description}</p>
-                                <p className="text-sm mt-1">
-                                    ⏱ {new Date(s.StartTime).toLocaleDateString()} → {new Date(s.EndTime).toLocaleDateString()}
-                                </p>
-                                <p className="text-sm">{s.Status ? "🟢 Hoạt động" : "🔴 Kết thúc"}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setForm({
-                                            ...s,
-                                            StartTime: new Date(s.StartTime).toISOString(),
-                                            EndTime: new Date(s.EndTime).toISOString(),
-                                            Status: s.Status ?? true, // Đặt mặc định Status là true nếu không có
-                                        })
-                                        setIsEditing(true)
-                                        setIsOpen(true)
-                                    }}
-                                >
-                                    Sửa
+            {/* Thanh tìm kiếm và bộ lọc */}
+            <div className="flex items-end gap-4 mb-6">
+                <div className="flex-1">
+                    <Label className="text-sm font-medium">Tìm kiếm</Label>
+                    <Input
+                        placeholder="Tìm theo tiêu đề hoặc mô tả..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="mt-1"
+                    />
+                </div>
+                <div className="w-40">
+                    <Label className="text-sm font-medium">Lọc trạng thái</Label>
+                    <select
+                        className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "ended")}
+                    >
+                        <option value="all">Tất cả</option>
+                        <option value="active">Hoạt động</option>
+                        <option value="ended">Đã kết thúc</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Bảng khảo sát */}
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50">
+                            <TableHead className="font-medium">
+                                <Button variant="ghost" onClick={() => handleSort("Title")} className="hover:bg-muted">
+                                    Tiêu đề
+                                    {sortField === "Title" && (sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                                 </Button>
-                                <Button
-                                    variant="destructive"
-                                    onClick={() => {
-                                        setSurveyToDelete(s.Id)
-                                        setIsDeleteDialogOpen(true)
-                                    }}
-                                >
-                                    Xóa
+                            </TableHead>
+                            <TableHead className="font-medium">
+                                <Button variant="ghost" onClick={() => handleSort("Description")} className="hover:bg-muted">
+                                    Mô tả
+                                    {sortField === "Description" && (sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                                 </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            </TableHead>
+                            <TableHead className="font-medium">
+                                <Button variant="ghost" onClick={() => handleSort("StartTime")} className="hover:bg-muted">
+                                    Thời gian bắt đầu
+                                    {sortField === "StartTime" && (sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
+                                </Button>
+                            </TableHead>
+                            <TableHead className="font-medium">
+                                <Button variant="ghost" onClick={() => handleSort("EndTime")} className="hover:bg-muted">
+                                    Thời gian kết thúc
+                                    {sortField === "EndTime" && (sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
+                                </Button>
+                            </TableHead>
+                            <TableHead className="font-medium">
+                                <Button variant="ghost" onClick={() => handleSort("Status")} className="hover:bg-muted">
+                                    Trạng thái
+                                    {sortField === "Status" && (sortOrder === "asc" ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
+                                </Button>
+                            </TableHead>
+                            <TableHead className="font-medium text-right">Hành động</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredSurveys.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                    Không tìm thấy khảo sát nào
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredSurveys.map((s) => (
+                                <TableRow key={s.Id} className="hover:bg-muted/50">
+                                    <TableCell className="font-medium">{s.Title}</TableCell>
+                                    <TableCell>{s.Description}</TableCell>
+                                    <TableCell>{new Date(s.StartTime).toLocaleDateString()}</TableCell>
+                                    <TableCell>{new Date(s.EndTime).toLocaleDateString()}</TableCell>
+                                    <TableCell>{s.Status ? "🟢 Hoạt động" : "🔴 Kết thúc"}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setForm({
+                                                        ...s,
+                                                        StartTime: new Date(s.StartTime).toISOString(),
+                                                        EndTime: new Date(s.EndTime).toISOString(),
+                                                        Status: s.Status ?? true,
+                                                    })
+                                                    setIsEditing(true)
+                                                    setIsOpen(true)
+                                                }}
+                                            >
+                                                Sửa
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setSurveyToDelete(s.Id)
+                                                    setIsDeleteDialogOpen(true)
+                                                }}
+                                            >
+                                                Xóa
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
             </div>
 
             {/* Dialog xác nhận xóa */}
