@@ -22,10 +22,11 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 type Info = {
-  Id: number
-  Name: string
-  Region: string
+    Id: number
+    Name: string
+    Region: string
 }
+import { API } from "@/lib/api"
 
 export default function InfoTablePage() {
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
@@ -41,11 +42,11 @@ export default function InfoTablePage() {
     });
     const [editMode, setEditMode] = useState(false);
     const [infoList, setInfoList] = useState<Info[]>([])
-    
+
     const isNameDuplicate = (name: string): boolean => {
         return infoList.some(item => item.Name.toLowerCase().trim() === name.toLowerCase().trim());
     };
-      
+
     const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (editMode) {
@@ -64,21 +65,21 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch("http://localhost:5000/provinces/sua", {
+                const res = await fetch(`${API.provinces}/sua`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(editFormData),
                 });
-        
+
                 if (!res.ok) {
                     throw new Error("Failed to submit");
                 }
-        
+
                 console.log("Submitted successfully", editFormData);
                 window.location.reload();
-                setEditFormData({Id: -1, Name: "", Region: "" });
+                setEditFormData({ Id: -1, Name: "", Region: "" });
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -88,18 +89,18 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch("http://localhost:5000/provinces", {
+                const res = await fetch(API.provinces, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(infoFormData),
                 });
-        
+
                 if (!res.ok) {
                     throw new Error("Failed to submit");
                 }
-        
+
                 console.log("Submitted successfully", infoFormData);
                 window.location.reload();
                 setInfoFormData({ Name: "", Region: "" });
@@ -115,11 +116,11 @@ export default function InfoTablePage() {
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
     };
-    const handleDelClick = async (data: {Id: number}) => {
+    const handleDelClick = async (data: { Id: number }) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
-                const res = await fetch("http://localhost:5000/provinces", {
+                const res = await fetch(API.provinces, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
@@ -135,10 +136,9 @@ export default function InfoTablePage() {
         }
     };
     useEffect(() => {
-        // Gọi API từ backend Next.js
         async function fetchInfo() {
             try {
-                const response = await fetch("./api/provinces")
+                const response = await fetch(API.provinces)
                 const data = await response.json()
                 console.log(data)
                 setInfoList(data)
@@ -161,7 +161,7 @@ export default function InfoTablePage() {
                             if (!isOpen) {
                                 setEditMode(false) // Đặt lại chế độ về thêm mới
                                 setInfoFormData({ Name: "", Region: "" })
-                                setEditFormData({Id: -1, Name: "", Region: "" })
+                                setEditFormData({ Id: -1, Name: "", Region: "" })
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
@@ -203,7 +203,7 @@ export default function InfoTablePage() {
                                                 setInfoDialogOpen(false)
                                                 setEditMode(false)
                                                 setInfoFormData({ Name: "", Region: "" })
-                                                setEditFormData({Id: -1, Name: "", Region: "" })
+                                                setEditFormData({ Id: -1, Name: "", Region: "" })
                                                 setOldName("")
                                             }}
                                         >
@@ -229,13 +229,13 @@ export default function InfoTablePage() {
                                     <TableRow key={item.Id}>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, Name: item.Name, Region: item.Region })}>
-                                                    <Pencil className="w-4 h-4 mr-1"/> Sửa
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, Name: item.Name, Region: item.Region })}>
+                                                    <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
-                                                    onClick={() => handleDelClick({Id: item.Id})}
+                                                    onClick={() => handleDelClick({ Id: item.Id })}
                                                 >
                                                     <Trash2 className="w-4 h-4 mr-1" /> Xóa
                                                 </Button>

@@ -1,5 +1,6 @@
 "use client"
 
+import { API } from "@/lib/api"
 import { use, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,13 +24,13 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 type Info = {
-  Id: number
-  DistrictId: number
-  Name: string
+    Id: number
+    DistrictId: number
+    Name: string
 }
 type ValuePair = {
-  Id: number
-  Name: string
+    Id: number
+    Name: string
 }
 
 export default function InfoTablePage() {
@@ -47,11 +48,11 @@ export default function InfoTablePage() {
     });
     const [editMode, setEditMode] = useState(false);
     const [infoList, setInfoList] = useState<Info[]>([])
-    
+
     const isNameDuplicate = (name: string): boolean => {
         return infoList.some(item => item.Name.toLowerCase().trim() === name.toLowerCase().trim());
     };
-    
+
     const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (editMode) {
@@ -74,21 +75,21 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch("http://localhost:5000/wards/sua", {
+                const res = await fetch(`${API.wards}/sua`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(editFormData),
                 });
-        
+
                 if (!res.ok) {
                     throw new Error("Failed to submit");
                 }
-        
+
                 console.log("Submitted successfully", editFormData);
                 window.location.reload();
-                setEditFormData({Id: -1, DistrictId: -1, Name: ""});
+                setEditFormData({ Id: -1, DistrictId: -1, Name: "" });
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -102,21 +103,21 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch("http://localhost:5000/wards", {
+                const res = await fetch(API.wards, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(infoFormData),
                 });
-        
+
                 if (!res.ok) {
                     throw new Error("Failed to submit");
                 }
-        
+
                 console.log("Submitted successfully", infoFormData);
                 window.location.reload();
-                setInfoFormData({DistrictId: -1, Name: ""});
+                setInfoFormData({ DistrictId: -1, Name: "" });
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -137,11 +138,11 @@ export default function InfoTablePage() {
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
     };
-    const handleDelClick = async (data: {Id: number}) => {
+    const handleDelClick = async (data: { Id: number }) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
-                const res = await fetch("http://localhost:5000/wards", {
+                const res = await fetch(API.wards, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
@@ -160,10 +161,10 @@ export default function InfoTablePage() {
         // Gọi API từ backend Next.js
         async function fetchInfo() {
             try {
-                const response = await fetch("http://localhost:5000/wards")
+                const response = await fetch(API.wards)
                 const data = await response.json()
                 setInfoList(data)
-                const res = await fetch("http://localhost:5000/wards/parent_list")
+                const res = await fetch(`${API.districts}/parent_list`)
                 const data2 = await res.json()
                 setValuePairList(data2)
             } catch (error) {
@@ -188,8 +189,8 @@ export default function InfoTablePage() {
                             setInfoDialogOpen(isOpen)
                             if (!isOpen) {
                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                setInfoFormData({DistrictId: -1, Name: ""}) // Đặt lại giá trị form
-                                setEditFormData({Id: -1, DistrictId: -1, Name: ""}) // Đặt lại giá trị form
+                                setInfoFormData({ DistrictId: -1, Name: "" }) // Đặt lại giá trị form
+                                setEditFormData({ Id: -1, DistrictId: -1, Name: "" }) // Đặt lại giá trị form
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
@@ -235,8 +236,8 @@ export default function InfoTablePage() {
                                             onClick={() => {
                                                 setInfoDialogOpen(false)
                                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                                setInfoFormData({DistrictId: -1, Name: ""}) // Đặt lại giá trị form
-                                                setEditFormData({Id: -1, DistrictId: -1, Name: ""}) // Đặt lại giá trị form
+                                                setInfoFormData({ DistrictId: -1, Name: "" }) // Đặt lại giá trị form
+                                                setEditFormData({ Id: -1, DistrictId: -1, Name: "" }) // Đặt lại giá trị form
                                                 setOldName("") // Đặt lại tên cũ
                                             }}
                                         >
@@ -253,7 +254,7 @@ export default function InfoTablePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
-                                    <TableHead className="w-[300px]">Tên Phường/Xã</TableHead> 
+                                    <TableHead className="w-[300px]">Tên Phường/Xã</TableHead>
                                     <TableHead className="w-[200px]">Thuộc Quận/Huyện</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -262,13 +263,13 @@ export default function InfoTablePage() {
                                     <TableRow key={item.Id}>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, DistrictId: item.DistrictId, Name: item.Name })}>
-                                                    <Pencil className="w-4 h-4 mr-1"/> Sửa
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, DistrictId: item.DistrictId, Name: item.Name })}>
+                                                    <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
-                                                    onClick={() => handleDelClick({Id: item.Id})}
+                                                    onClick={() => handleDelClick({ Id: item.Id })}
                                                 >
                                                     <Trash2 className="w-4 h-4 mr-1" /> Xóa
                                                 </Button>

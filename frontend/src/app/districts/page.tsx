@@ -22,15 +22,18 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { API } from "@/lib/api"
+
 type Info = {
-  Id: number
-  ProvinceId: number
-  Name: string
+    Id: number
+    ProvinceId: number
+    Name: string
 }
 type ValuePair = {
-  Id: number
-  Name: string
+    Id: number
+    Name: string
 }
+
 
 export default function InfoTablePage() {
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
@@ -47,11 +50,11 @@ export default function InfoTablePage() {
     });
     const [editMode, setEditMode] = useState(false);
     const [infoList, setInfoList] = useState<Info[]>([])
-    
+
     const isNameDuplicate = (name: string): boolean => {
         return infoList.some(item => item.Name.toLowerCase().trim() === name.toLowerCase().trim());
     };
-    
+
     const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (editMode) {
@@ -74,21 +77,21 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch("http://localhost:5000/districts/sua", {
+                const res = await fetch(`${API.districts}/sua`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(editFormData),
                 });
-        
+
                 if (!res.ok) {
                     throw new Error("Failed to submit");
                 }
-        
+
                 console.log("Submitted successfully", editFormData);
                 window.location.reload();
-                setEditFormData({Id: -1, ProvinceId: -1, Name: ""});
+                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" });
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -103,21 +106,21 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch("http://localhost:5000/districts", {
+                const res = await fetch(API.districts, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(infoFormData),
                 });
-        
+
                 if (!res.ok) {
                     throw new Error("Failed to submit");
                 }
-        
+
                 console.log("Submitted successfully", infoFormData);
                 window.location.reload();
-                setInfoFormData({ProvinceId: -1, Name: ""});
+                setInfoFormData({ ProvinceId: -1, Name: "" });
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -138,11 +141,11 @@ export default function InfoTablePage() {
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
     };
-    const handleDelClick = async (data: {Id: number}) => {
+    const handleDelClick = async (data: { Id: number }) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
-                const res = await fetch("http://localhost:5000/districts", {
+                const res = await fetch(API.districts, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
@@ -161,10 +164,10 @@ export default function InfoTablePage() {
         // Gọi API từ backend Next.js
         async function fetchInfo() {
             try {
-                const response = await fetch("http://localhost:5000/districts")
+                const response = await fetch(API.districts)
                 const data = await response.json()
                 setInfoList(data)
-                const res = await fetch("http://localhost:5000/districts/parent_list")
+                const res = await fetch(`${API.districts}/parent_list`)
                 const data2 = await res.json()
                 setValuePairList(data2)
             } catch (error) {
@@ -189,8 +192,8 @@ export default function InfoTablePage() {
                             setInfoDialogOpen(isOpen)
                             if (!isOpen) {
                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                setInfoFormData({ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
-                                setEditFormData({Id: -1, ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
+                                setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
@@ -237,8 +240,8 @@ export default function InfoTablePage() {
                                             onClick={() => {
                                                 setInfoDialogOpen(false)
                                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                                setInfoFormData({ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
-                                                setEditFormData({Id: -1, ProvinceId: -1, Name: ""}) // Đặt lại giá trị form
+                                                setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                                                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
                                                 setOldName("") // Đặt lại tên cũ
                                             }}
                                         >
@@ -255,7 +258,7 @@ export default function InfoTablePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
-                                    <TableHead className="w-[300px]">Tên Quận/Huyện</TableHead> 
+                                    <TableHead className="w-[300px]">Tên Quận/Huyện</TableHead>
                                     <TableHead className="w-[200px]">Thuộc Tỉnh/TP</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -264,13 +267,13 @@ export default function InfoTablePage() {
                                     <TableRow key={item.Id}>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, ProvinceId: item.ProvinceId, Name: item.Name })}>
-                                                    <Pencil className="w-4 h-4 mr-1"/> Sửa
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, ProvinceId: item.ProvinceId, Name: item.Name })}>
+                                                    <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
-                                                    onClick={() => handleDelClick({Id: item.Id})}
+                                                    onClick={() => handleDelClick({ Id: item.Id })}
                                                 >
                                                     <Trash2 className="w-4 h-4 mr-1" /> Xóa
                                                 </Button>
