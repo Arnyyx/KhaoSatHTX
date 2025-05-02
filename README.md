@@ -6,7 +6,7 @@ npx shadcn@latest add alert avatar badge button card dialog input label radio-gr
 
 Setup Backend
 npm init -y
-npm install express mssql dotenv cors
+npm install express sequelize sequelize-cli tedious dotenv multer csv-parse mssql cors
 
 Setup Database
 -- Tạo database

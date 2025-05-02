@@ -1,11 +1,15 @@
 const express = require('express');
-const { poolPromise } = require('./db');
+const sequelize = require("./config/database");
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+sequelize.sync({ force: false }).then(() => {
+    console.log("Đồng bộ database thành công");
+});
 
 const provincesMld = require('./routes/ProvincesModule.js');
 app.use('/api/provinces', provincesMld);
@@ -18,6 +22,9 @@ app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 const surveysRouter = require('./routes/surveys');
 app.use('/api/surveys', surveysRouter);
+
+const userRoutes = require('./routes/userRoutes');
+app.use('/api/users', userRoutes);
 
 const port = process.env.PORT;
 app.listen(port, () => {
