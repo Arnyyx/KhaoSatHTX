@@ -8,18 +8,18 @@ app.use(express.json());
 app.use(cors());
 
 const provincesMld = require('./routes/ProvincesModule.js');
-app.use('/provinces',provincesMld);
+app.use('/api/provinces',provincesMld);
 const districtsMld = require('./routes/DistrictsModule.js');
-app.use('/districts',districtsMld);
+app.use('/api/districts',districtsMld);
 const wardsMld = require('./routes/WardsModule.js');
-app.use('/wards',wardsMld);
+app.use('/api/wards',wardsMld);
 
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 const surveysRouter = require('./routes/surveys');
 app.use('/api/surveys', surveysRouter);
 
-const port = 5000;
+const port = 4000;
 app.listen(port, () => {
     console.log(`🚀 Server is running on http://localhost:${port}`);
 });
