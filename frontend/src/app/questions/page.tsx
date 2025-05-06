@@ -16,52 +16,51 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
     DialogDescription,
+    DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2 } from "lucide-react";
 
 // Dữ liệu giả (sẽ thay bằng API sau)
-const entities = [
+const surveys = [
     {
         id: 1,
-        name: "HTX Nông nghiệp Hòa Bình",
-        address: "123 Đường Láng, Hà Nội",
-        phone: "0123-456-789",
-        status: true,
-        type: "HTX",
+        title: "Khảo sát chất lượng HTX 2025",
     },
     {
         id: 2,
-        name: "QTD Nhân dân Ba Đình",
-        address: "456 Kim Mã, Hà Nội",
-        phone: "0987-654-321",
-        status: true,
-        type: "QTD",
-    },
-    {
-        id: 3,
-        name: "HTX Sản xuất Thực phẩm Sạch",
-        address: "789 Giải Phóng, Hà Nội",
-        phone: "0912-345-678",
-        status: false,
-        type: "HTX",
+        title: "Khảo sát nhu cầu thị trường",
     },
 ];
 
-export default function HTXManagementPage() {
+const questions = [
+    {
+        id: 1,
+        surveyId: 1,
+        questionContent: "Bạn có hài lòng với chất lượng dịch vụ của HTX?",
+    },
+    {
+        id: 2,
+        surveyId: 1,
+        questionContent: "Góp ý để cải thiện dịch vụ của HTX?",
+    },
+    {
+        id: 3,
+        surveyId: 2,
+        questionContent: "Sản phẩm nông nghiệp nào bạn quan tâm nhất?",
+    },
+];
+
+export default function QuestionManagementPage() {
     // State cho dialog thêm/sửa
     const [dialogOpen, setDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
         id: 0,
-        name: "",
-        address: "",
-        phone: "",
-        status: true,
-        type: "HTX",
+        surveyId: "",
+        questionContent: "",
     });
     const [isEdit, setIsEdit] = useState(false);
 
@@ -70,29 +69,30 @@ export default function HTXManagementPage() {
     const [deleteId, setDeleteId] = useState<number | null>(null);
 
     // Xử lý form
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isEdit) {
-            console.log("Cập nhật", formData);
+            console.log("Cập nhật câu hỏi", formData);
         } else {
-            console.log("Thêm mới", formData);
+            console.log("Thêm câu hỏi mới", formData);
         }
         setDialogOpen(false);
-        setFormData({ id: 0, name: "", address: "", phone: "", status: true, type: "HTX" });
+        setFormData({ id: 0, surveyId: "", questionContent: "" });
         setIsEdit(false);
     };
 
     // Xử lý chỉnh sửa
-    const handleEdit = (entity: typeof entities[0]) => {
-        setFormData(entity);
+    const handleEdit = (question: typeof questions[0]) => {
+        setFormData({
+            id: question.id,
+            surveyId: question.surveyId.toString(),
+            questionContent: question.questionContent,
+        });
         setIsEdit(true);
         setDialogOpen(true);
     };
@@ -100,7 +100,7 @@ export default function HTXManagementPage() {
     // Xử lý xóa
     const handleDelete = () => {
         if (deleteId !== null) {
-            console.log(`Xóa ID: ${deleteId}`);
+            console.log(`Xóa câu hỏi ID: ${deleteId}`);
             setDeleteDialogOpen(false);
             setDeleteId(null);
         }
@@ -111,75 +111,46 @@ export default function HTXManagementPage() {
             <Card className="mx-auto w-full">
                 <CardContent className="p-6">
                     <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-2xl font-semibold">Quản lý HTX và QTD</h1>
+                        <h1 className="text-2xl font-semibold">Quản lý câu hỏi</h1>
                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button onClick={() => setIsEdit(false)}>Thêm HTX/QTD</Button>
+                                <Button onClick={() => setIsEdit(false)}>Thêm câu hỏi</Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[500px]">
                                 <DialogHeader>
-                                    <DialogTitle>{isEdit ? "Chỉnh sửa HTX/QTD" : "Thêm HTX/QTD mới"}</DialogTitle>
+                                    <DialogTitle>{isEdit ? "Chỉnh sửa câu hỏi" : "Thêm câu hỏi mới"}</DialogTitle>
                                 </DialogHeader>
                                 <form onSubmit={handleSubmit} className="space-y-4">
                                     <div>
-                                        <Label htmlFor="name">Tên</Label>
-                                        <Input
-                                            id="name"
-                                            name="name"
-                                            value={formData.name}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="Nhập tên HTX hoặc QTD"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="address">Địa chỉ</Label>
-                                        <Input
-                                            id="address"
-                                            name="address"
-                                            value={formData.address}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="Nhập địa chỉ"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="phone">Số điện thoại</Label>
-                                        <Input
-                                            id="phone"
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleChange}
-                                            required
-                                            placeholder="Nhập số điện thoại"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="type">Loại</Label>
+                                        <Label htmlFor="surveyId">Khảo sát</Label>
                                         <Select
-                                            name="type"
-                                            value={formData.type}
-                                            onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
+                                            name="surveyId"
+                                            value={formData.surveyId}
+                                            onValueChange={(value) => setFormData(prev => ({ ...prev, surveyId: value }))}
+                                            required
                                         >
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Chọn loại" />
+                                                <SelectValue placeholder="Chọn khảo sát" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="HTX">HTX</SelectItem>
-                                                <SelectItem value="QTD">QTD</SelectItem>
+                                                {surveys.map((survey) => (
+                                                    <SelectItem key={survey.id} value={survey.id.toString()}>
+                                                        {survey.title}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="status"
-                                            name="status"
-                                            checked={formData.status}
+                                    <div>
+                                        <Label htmlFor="questionContent">Nội dung câu hỏi</Label>
+                                        <Textarea
+                                            id="questionContent"
+                                            name="questionContent"
+                                            value={formData.questionContent}
                                             onChange={handleChange}
-                                            aria-label="Trạng thái hoạt động"
+                                            required
+                                            placeholder="Nhập nội dung câu hỏi"
                                         />
-                                        <Label htmlFor="status">Hoạt động</Label>
                                     </div>
                                     <div className="flex justify-end gap-2">
                                         <Button
@@ -188,7 +159,7 @@ export default function HTXManagementPage() {
                                             onClick={() => {
                                                 setDialogOpen(false);
                                                 setIsEdit(false);
-                                                setFormData({ id: 0, name: "", address: "", phone: "", status: true, type: "HTX" });
+                                                setFormData({ id: 0, surveyId: "", questionContent: "" });
                                             }}
                                         >
                                             Hủy
@@ -205,22 +176,19 @@ export default function HTXManagementPage() {
                                 <TableRow>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
                                     <TableHead className="w-[50px]">ID</TableHead>
-                                    <TableHead className="w-[200px]">Tên</TableHead>
-                                    <TableHead className="w-[250px]">Địa chỉ</TableHead>
-                                    <TableHead className="w-[150px]">Số điện thoại</TableHead>
-                                    <TableHead className="w-[100px]">Loại</TableHead>
-                                    <TableHead className="w-[100px]">Trạng thái</TableHead>
+                                    <TableHead className="w-[200px]">Khảo sát</TableHead>
+                                    <TableHead className="w-[400px]">Nội dung câu hỏi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {entities.map((entity) => (
-                                    <TableRow key={entity.id}>
+                                {questions.map((question) => (
+                                    <TableRow key={question.id}>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleEdit(entity)}
+                                                    onClick={() => handleEdit(question)}
                                                 >
                                                     <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
@@ -228,7 +196,7 @@ export default function HTXManagementPage() {
                                                     variant="destructive"
                                                     size="sm"
                                                     onClick={() => {
-                                                        setDeleteId(entity.id);
+                                                        setDeleteId(question.id);
                                                         setDeleteDialogOpen(true);
                                                     }}
                                                 >
@@ -236,18 +204,11 @@ export default function HTXManagementPage() {
                                                 </Button>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{entity.id}</TableCell>
-                                        <TableCell>{entity.name}</TableCell>
-                                        <TableCell>{entity.address}</TableCell>
-                                        <TableCell>{entity.phone}</TableCell>
-                                        <TableCell>{entity.type}</TableCell>
+                                        <TableCell>{question.id}</TableCell>
                                         <TableCell>
-                                            {entity.status ? (
-                                                <span className="text-green-600">Hoạt động</span>
-                                            ) : (
-                                                <span className="text-red-600">Ngừng</span>
-                                            )}
+                                            {surveys.find((s) => s.id === question.surveyId)?.title || "N/A"}
                                         </TableCell>
+                                        <TableCell>{question.questionContent}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -259,7 +220,7 @@ export default function HTXManagementPage() {
                             <DialogHeader>
                                 <DialogTitle>Xác nhận xóa</DialogTitle>
                                 <DialogDescription>
-                                    Bạn có chắc muốn xóa {entities.find(e => e.id === deleteId)?.name}? Hành động này không thể hoàn tác.
+                                    Bạn có chắc muốn xóa câu hỏi này? Hành động này không thể hoàn tác.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="flex justify-end gap-2">

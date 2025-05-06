@@ -46,6 +46,8 @@
 
 :root {
   --radius: 0.625rem;
+  /* màu nền sáng */
+  /* chữ màu đậm */
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -54,7 +56,9 @@
   --popover-foreground: oklch(0.145 0 0);
 
   --primary: oklch(0.205 0 0);
+  /* chính là #0ea5e9 */
   --primary-foreground: oklch(0.985 0 0);
+  /* chữ trắng */
 
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -79,6 +83,7 @@
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
+  /* giống primary */
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
