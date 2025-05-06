@@ -7,6 +7,5 @@ export const API = {
     users: `${BASE_URL}/users`,
     provinces: `${BASE_URL}/provinces`,
     districts: `${BASE_URL}/districts`,
-    wards: `${BASE_URL}/wards`
-    // thêm endpoint khác nếu cần
+    wards: `${BASE_URL}/wards`,
 }

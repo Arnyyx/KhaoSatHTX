@@ -26,9 +26,9 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 type Info = {
-  Id: number
-  Name: string
-  Region: string
+    Id: number
+    Name: string
+    Region: string
 }
 export default function InfoTablePage() {
     // #region Biến
@@ -75,13 +75,13 @@ export default function InfoTablePage() {
                     },
                     body: JSON.stringify(editFormData),
                 });
-        
+
                 if (!res.ok) {
                     const errMsg = await res.text();
                     alert("Lỗi cập nhật: " + errMsg);
                     return;
                 }
-        
+
                 console.log("Submitted successfully", editFormData);
                 setEditFormData({Id: -1, Name: "", Region: "" })
                 setEditMode(false)
@@ -91,20 +91,20 @@ export default function InfoTablePage() {
             }
         } else {
             try {
-                const res = await fetch(`${API.provinces}`, {
+                const res = await fetch(API.provinces, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(infoFormData),
                 });
-        
+
                 if (!res.ok) {
                     const errText = await res.text(); // đọc lỗi trả về từ SQL
                     alert("Lỗi: " + errText);
                     return;
                 }
-        
+
                 console.log("Submitted successfully", infoFormData);
                 setInfoFormData({ Name: "", Region: "" })
                 fetchInfo(currentPage);
@@ -232,7 +232,7 @@ export default function InfoTablePage() {
                             if (!isOpen) {
                                 setEditMode(false) // Đặt lại chế độ về thêm mới
                                 setInfoFormData({ Name: "", Region: "" })
-                                setEditFormData({Id: -1, Name: "", Region: "" })
+                                setEditFormData({ Id: -1, Name: "", Region: "" })
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
@@ -282,7 +282,7 @@ export default function InfoTablePage() {
                                                 setInfoDialogOpen(false)
                                                 setEditMode(false)
                                                 setInfoFormData({ Name: "", Region: "" })
-                                                setEditFormData({Id: -1, Name: "", Region: "" })
+                                                setEditFormData({ Id: -1, Name: "", Region: "" })
                                                 setOldName("")
                                             }}
                                         >
@@ -333,13 +333,13 @@ export default function InfoTablePage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, Name: item.Name, Region: item.Region })}>
-                                                    <Pencil className="w-4 h-4 mr-1"/> Sửa
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, Name: item.Name, Region: item.Region })}>
+                                                    <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
-                                                    onClick={() => handleDelClick({Id: item.Id})}
+                                                    onClick={() => handleDelClick({ Id: item.Id })}
                                                 >
                                                     <Trash2 className="w-4 h-4 mr-1" /> Xóa
                                                 </Button>

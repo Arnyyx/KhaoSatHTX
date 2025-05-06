@@ -1,5 +1,6 @@
 "use client"
 
+import { API } from "@/lib/api"
 import { use, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card"
 import { Pencil, Trash2, BarChart2 } from "lucide-react";
-import { API } from "@/lib/api"
 import { Config } from "@/lib/config"
 import Pagination from '@/lib/Pagination';
 import {
@@ -27,9 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 type Info = {
-  Id: number
-  DistrictId: number
-  Name: string
+    Id: number
+    DistrictId: number
+    Name: string
 }
 type Info2 = {
   Id: number
@@ -37,8 +37,8 @@ type Info2 = {
   Name: string
 }
 type ValuePair = {
-  Id: number
-  Name: string
+    Id: number
+    Name: string
 }
 
 export default function InfoTablePage() {
@@ -94,13 +94,13 @@ export default function InfoTablePage() {
                     },
                     body: JSON.stringify(editFormData),
                 });
-        
+
                 if (!res.ok) {
                     const errText = await res.text(); // đọc lỗi trả về từ SQL
                     alert("Lỗi: " + errText);
                     return;
                 }
-        
+
                 console.log("Submitted successfully", editFormData);
                 setEditFormData({Id: -1, DistrictId: -1, Name: ""});
                 fetchInfo(currentPage)
@@ -113,20 +113,20 @@ export default function InfoTablePage() {
                 return;
             }
             try {
-                const res = await fetch(`${API.wards}`, {
+                const res = await fetch(API.wards, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(infoFormData),
                 });
-        
+
                 if (!res.ok) {
                     const errText = await res.text(); // đọc lỗi trả về từ SQL
                     alert("Lỗi: " + errText);
                     return;
                 }
-        
+
                 console.log("Submitted successfully", infoFormData);
                 setInfoFormData({DistrictId: -1, Name: ""});
                 fetchInfo(currentPage)
@@ -169,12 +169,11 @@ export default function InfoTablePage() {
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
     };
-    const handleDelClick = async (data: {Id: number}) => {
+    const handleDelClick = async (data: { Id: number }) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
-                setSelectedIds([data.Id])
-                const res = await fetch(`${API.wards}`, {
+                const res = await fetch(API.wards, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
@@ -287,8 +286,8 @@ export default function InfoTablePage() {
                             if (!isOpen) {
                                 setValueId(-1)
                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                setInfoFormData({DistrictId: -1, Name: ""}) // Đặt lại giá trị form
-                                setEditFormData({Id: -1, DistrictId: -1, Name: ""}) // Đặt lại giá trị form
+                                setInfoFormData({ DistrictId: -1, Name: "" }) // Đặt lại giá trị form
+                                setEditFormData({ Id: -1, DistrictId: -1, Name: "" }) // Đặt lại giá trị form
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
@@ -360,8 +359,8 @@ export default function InfoTablePage() {
                                                 setValueId(-1)
                                                 setInfoDialogOpen(false)
                                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                                setInfoFormData({DistrictId: -1, Name: ""}) // Đặt lại giá trị form
-                                                setEditFormData({Id: -1, DistrictId: -1, Name: ""}) // Đặt lại giá trị form
+                                                setInfoFormData({ DistrictId: -1, Name: "" }) // Đặt lại giá trị form
+                                                setEditFormData({ Id: -1, DistrictId: -1, Name: "" }) // Đặt lại giá trị form
                                                 setOldName("") // Đặt lại tên cũ
                                             }}
                                         >
@@ -396,7 +395,7 @@ export default function InfoTablePage() {
                                     />
                                     </TableHead>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
-                                    <TableHead className="w-[300px]">Tên Phường/Xã</TableHead> 
+                                    <TableHead className="w-[300px]">Tên Phường/Xã</TableHead>
                                     <TableHead className="w-[200px]">Thuộc Quận/Huyện</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -413,13 +412,13 @@ export default function InfoTablePage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, DistrictId: item.DistrictId, Name: item.Name })}>
-                                                    <Pencil className="w-4 h-4 mr-1"/> Sửa
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, DistrictId: item.DistrictId, Name: item.Name })}>
+                                                    <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
-                                                    onClick={() => handleDelClick({Id: item.Id})}
+                                                    onClick={() => handleDelClick({ Id: item.Id })}
                                                 >
                                                     <Trash2 className="w-4 h-4 mr-1" /> Xóa
                                                 </Button>
