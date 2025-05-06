@@ -1,5 +1,8 @@
 
 const express = require('express');
+const ExcelJS = require('exceljs');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 const { poolPromise } = require('../db');
 require('dotenv').config();
 const router = express.Router();
@@ -17,6 +20,35 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/page/:page', async (req, res) => {
+  try {
+    const pageIndex = parseInt(req.params.page, 10);
+    const search = req.query.search || '';
+    const pageSize = req.query.page_size;
+
+    if (isNaN(pageIndex) || pageIndex < 1) {
+      return res.status(400).send('Invalid page number');
+    }
+
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+      .input('pageSize', pageSize)
+      .input('pageIndex', pageIndex)
+      .input('search', search)
+      .execute(`sp_${tableName}_GetByPage`);
+
+    const items = result.recordset;
+    const total = result.recordsets[1][0].total;
+
+    res.json({ items, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Database error');
+  }
+});
+
+
 router.post('/', async (req, res) => {
   try {
     const pool = await poolPromise;
@@ -28,7 +60,11 @@ router.post('/', async (req, res) => {
     res.json(result.recordset);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Database error');
+    if (err.originalError && err.originalError.info && err.originalError.info.message) {
+      res.status(400).send(err.originalError.info.message); 
+    } else {
+      res.status(500).send('Database error');
+    }
   }
 });
 
@@ -44,21 +80,101 @@ router.post('/sua', async (req, res) => {
     res.json(result.recordset);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Database error');
+    if (err.originalError && err.originalError.info && err.originalError.info.message) {
+      res.status(400).send(err.originalError.info.message); 
+    } else {
+      res.status(500).send('Database error');
+    }
   }
 });
 
 router.delete('/', async (req, res) => {
   try {
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('PR_Id', req.body.Id)
-      .execute(`sp_${tableName}_Delete`);
+    const { ids } = req.body; // Nhận danh sách Ids
 
-    res.json(result.recordset);
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).send('No IDs provided');
+    }
+
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    ids.forEach((id, index) => {
+      request.input(`id${index}`, id);
+    });
+
+    // Ghép thành chuỗi Ids để truyền vào SQL
+    const idParams = ids.map((_, index) => `@id${index}`).join(',');
+
+    const sql = `DELETE FROM ${tableName} WHERE Id IN (${idParams})`;
+
+    await request.query(sql);
+
+    res.send('Deleted successfully');
   } catch (err) {
     console.error(err);
     res.status(500).send('Database error');
+  }
+});
+
+router.get('/export', async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request().query('SELECT Name, Region FROM Provinces');
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Tỉnh');
+
+    worksheet.columns = [
+      { header: 'Tên', key: 'Name', width: 30 },
+      { header: 'Vùng', key: 'Region', width: 30 },
+    ];      
+
+    worksheet.addRows(result.recordset);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=provinces.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Export failed');
+  }
+});
+
+router.post('/import', upload.single('file'), async (req, res) => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(req.file.path);
+    const worksheet = workbook.getWorksheet(1);
+
+    const pool = await poolPromise;
+    const skippedRows = [];
+
+    for (let i = 2; i <= worksheet.rowCount; i++) {
+      const row = worksheet.getRow(i);
+      const name = row.getCell(1).value;
+      const region = row.getCell(2).value;
+
+      try {
+        await pool.request()
+          .input('PR_Name', name)
+          .input('PR_Region', region)
+          .execute('sp_Provinces_Insert');
+      } catch (err) {
+        // Ghi lại dòng bị lỗi (ví dụ do trùng tên)
+        skippedRows.push({ row: i, name, error: err.message });
+        continue; // Tiếp tục với dòng sau
+      }
+    }
+    res.json({
+      message: 'Import hoàn tất!',
+      skipped: skippedRows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Import thất bại');
   }
 });
 

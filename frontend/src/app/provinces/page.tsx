@@ -1,11 +1,15 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card"
 import { Pencil, Trash2, BarChart2 } from "lucide-react";
+import { API } from "@/lib/api"
+import { Config } from "@/lib/config"
+import Pagination from '@/lib/Pagination';
 import {
     Table,
     TableBody,
@@ -26,9 +30,16 @@ type Info = {
     Name: string
     Region: string
 }
-import { API } from "@/lib/api"
-
 export default function InfoTablePage() {
+    // #region Biến
+    const [selectAll, setSelectAll] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [searchText, setSearchText] = useState("");
+    const searchParams = useSearchParams();
+    const page = Number(searchParams.get("page")) || 1;
+    const [currentPage, setCurrentPage] = useState(page);
+    const [totalPages, setTotalPages] = useState(1);
+
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
     const [oldName, setOldName] = useState("");
     const [infoFormData, setInfoFormData] = useState({
@@ -41,12 +52,9 @@ export default function InfoTablePage() {
         Region: "",
     });
     const [editMode, setEditMode] = useState(false);
-    const [infoList, setInfoList] = useState<Info[]>([])
-
-    const isNameDuplicate = (name: string): boolean => {
-        return infoList.some(item => item.Name.toLowerCase().trim() === name.toLowerCase().trim());
-    };
-
+    const [infoList, setInfoList] = useState<Info[]>([])    
+    // #endregion
+    // #region Insert + Edit
     const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (editMode) {
@@ -56,14 +64,9 @@ export default function InfoTablePage() {
             setInfoFormData(prev => ({ ...prev, [name]: value }));
         }
     };
-
     const handleInfoSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editMode) {
-            if (isNameDuplicate(editFormData.Name) && editFormData.Name !== oldName) {
-                alert("Tên tỉnh/thành phố đã tồn tại. Vui lòng nhập tên khác.");
-                return;
-            }
             try {
                 const res = await fetch(`${API.provinces}/sua`, {
                     method: "POST",
@@ -74,20 +77,19 @@ export default function InfoTablePage() {
                 });
 
                 if (!res.ok) {
-                    throw new Error("Failed to submit");
+                    const errMsg = await res.text();
+                    alert("Lỗi cập nhật: " + errMsg);
+                    return;
                 }
 
                 console.log("Submitted successfully", editFormData);
-                window.location.reload();
-                setEditFormData({ Id: -1, Name: "", Region: "" });
+                setEditFormData({Id: -1, Name: "", Region: "" })
+                setEditMode(false)
+                fetchInfo(currentPage);
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
         } else {
-            if (isNameDuplicate(infoFormData.Name)) {
-                alert("Tên tỉnh/thành phố đã tồn tại. Vui lòng nhập tên khác.");
-                return;
-            }
             try {
                 const res = await fetch(API.provinces, {
                     method: "POST",
@@ -98,12 +100,14 @@ export default function InfoTablePage() {
                 });
 
                 if (!res.ok) {
-                    throw new Error("Failed to submit");
+                    const errText = await res.text(); // đọc lỗi trả về từ SQL
+                    alert("Lỗi: " + errText);
+                    return;
                 }
 
                 console.log("Submitted successfully", infoFormData);
-                window.location.reload();
-                setInfoFormData({ Name: "", Region: "" });
+                setInfoFormData({ Name: "", Region: "" })
+                fetchInfo(currentPage);
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -116,18 +120,22 @@ export default function InfoTablePage() {
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
     };
-    const handleDelClick = async (data: { Id: number }) => {
+    // #endregion
+    // #region Del
+    const handleDelClick = async (data: {Id: number}) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
-                const res = await fetch(API.provinces, {
+                setSelectedIds([data.Id])
+                const res = await fetch(`${API.provinces}`, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify(data),
+                    body: JSON.stringify({ ids: [data.Id] }),
                 });
-                window.location.reload();
+                if (!res.ok) throw new Error("Delete failed");
+                await fetchInfo(currentPage);
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
@@ -135,20 +143,83 @@ export default function InfoTablePage() {
             console.log('Hủy');
         }
     };
-    useEffect(() => {
-        async function fetchInfo() {
-            try {
-                const response = await fetch(API.provinces)
-                const data = await response.json()
-                console.log(data)
-                setInfoList(data)
-            } catch (error) {
-                console.error("Error fetching data:", error)
-            }
+    const handleCheckboxChange = (id: number) => {
+        if (selectedIds.includes(id)) {
+            setSelectedIds(selectedIds.filter((itemId) => itemId !== id));
+        } else {
+            setSelectedIds([...selectedIds, id]);
         }
+    };
+    const handleSelectAllChange = () => {
+        if (selectAll) {
+            setSelectedIds([]); // bỏ chọn tất cả
+        } else {
+            const allIds = infoList.map(item => item.Id);
+            setSelectedIds(allIds);
+        }
+        setSelectAll(!selectAll);
+    };
+    
+    const handleDeleteMultiple = async () => {
+        const isConfirmed = window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} mục?`);
+        if (!isConfirmed) return;
+      
+        try {
+            const res = await fetch(`${API.provinces}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ ids: selectedIds }),
+            });
+      
+          if (!res.ok) {
+            const errText = await res.text();
+            alert("Lỗi: " + errText);
+            return;
+          }
+          setSelectedIds([]);
+          fetchInfo(currentPage);
+        } catch (error) {
+          console.error("Error deleting multiple:", error);
+        }
+    };
+    // #endregion
+    // #region Import Excel
+    const handleImport = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+      
+        const res = await fetch(`${API.provinces}/import`, {
+          method: 'POST',
+          body: formData,
+        });
+      
+        const text = await res.text();
+        alert(text);
+        fetchInfo(currentPage);
+    };
+    // #endregion
+    const fetchInfo = async (page: number) => {
+        try {
+            const response = await fetch(`${API.provinces}/page/${page}?page_size=${Config.pageSize}&search=${encodeURIComponent(searchText)}`);
+            const data = await response.json();
+            setInfoList(data.items);
+            const total = Math.ceil(data.total / Config.pageSize);
+            setTotalPages(total);
 
-        fetchInfo()
-    }, [])
+            if (data.items.length === 0 && page > 1) {
+                setCurrentPage(page - 1);
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
+    useEffect(() => {
+        fetchInfo(currentPage)
+        const allSelected = infoList.length > 0 && infoList.every(item => selectedIds.includes(item.Id));
+        setSelectAll(allSelected);
+    }, [currentPage])
 
     return (
         <main className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -165,6 +236,14 @@ export default function InfoTablePage() {
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
+                            <Button 
+                            variant="destructive" 
+                            disabled={selectedIds.length === 0}
+                            onClick={handleDeleteMultiple}
+                            >
+                                Xóa {selectedIds.length} mục
+                            </Button>
+
                             <DialogTrigger asChild>
                                 <Button>Thêm Tỉnh/Thành phố</Button>
                             </DialogTrigger>
@@ -216,9 +295,26 @@ export default function InfoTablePage() {
                         </Dialog>
                     </div>
                     <div className="overflow-x-auto">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Input 
+                                placeholder="Tìm kiếm..."
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                className="w-1/3"
+                            />
+                            <Button onClick={() => fetchInfo(1)}>Tìm kiếm</Button>
+                        </div>
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[60px] text-center">
+                                    <input
+                                        type="checkbox"
+                                        className="w-5 h-5"
+                                        checked={selectAll}
+                                        onChange={handleSelectAllChange}
+                                    />
+                                    </TableHead>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
                                     <TableHead className="w-[200px]">Tên</TableHead>
                                     <TableHead className="w-[300px]">Vùng</TableHead>
@@ -227,6 +323,14 @@ export default function InfoTablePage() {
                             <TableBody>
                                 {infoList.map((item) => (
                                     <TableRow key={item.Id}>
+                                        <TableCell>
+                                            <input
+                                            type="checkbox"
+                                            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            checked={selectedIds.includes(item.Id)}
+                                            onChange={() => handleCheckboxChange(item.Id)}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, Name: item.Name, Region: item.Region })}>
@@ -247,6 +351,20 @@ export default function InfoTablePage() {
                                 ))}
                             </TableBody>
                         </Table>
+                    </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={(page) => setCurrentPage(page)}
+                    />
+                    <div className="overflow-x-auto">
+                        <Button onClick={() => window.open(`${API.provinces}/export`, "_blank")}>
+                            Xuất Excel
+                        </Button>
+                        <form onSubmit={handleImport}>
+                            <Input type="file" name="file" accept=".xlsx" required />
+                            <Button type="submit">Import Excel</Button>
+                        </form>
                     </div>
                 </CardContent>
             </Card>
