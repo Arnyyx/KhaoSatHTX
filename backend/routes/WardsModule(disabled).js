@@ -7,22 +7,22 @@ const { poolPromise } = require('../db');
 require('dotenv').config();
 const router = express.Router();
 
-const tableName = "Districts"
+const tableName = "Wards"
+
+// router.get('/', async (req, res) => {
+//   try {
+//     const pool = await poolPromise;
+//     const result = await pool.request().execute(`sp_${tableName}_GetAll`);
+//     res.json(result.recordset);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send('Database error');
+//   }
+// });
 
 router.get('/', async (req, res) => {
   try {
-    const pool = await poolPromise;
-    const result = await pool.request().execute(`sp_${tableName}_GetAll`);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Database error');
-  }
-});
-
-router.get('/page/:page', async (req, res) => {
-  try {
-    const pageIndex = parseInt(req.params.page, 10);
+    const pageIndex = req.query.page || 1;
     const search = req.query.search || '';
     const pageSize = req.query.page_size;
 
@@ -39,10 +39,13 @@ router.get('/page/:page', async (req, res) => {
       .input('search', search)
       .execute(`sp_${tableName}_GetByPage`);
 
+    // Kết hợp dữ liệu vào định dạng yêu cầu
     const items = result.recordset;
-    const total = result.recordsets[1][0].total;
+    const total = result.recordsets[1][0].total;  // Lấy tổng từ recordsets thứ 2
 
+    // Trả về dữ liệu theo dạng { items: [], total: }
     res.json({ items, total });
+    
   } catch (err) {
     console.error(err);
     res.status(500).send('Database error');
@@ -65,8 +68,8 @@ router.post('/', async (req, res) => {
   try {
     const pool = await poolPromise;
     const result = await pool.request()
-      .input('DTR_Name', req.body.Name)
-      .input('DTR_PR_Id', req.body.ProvinceId)
+      .input('WA_Name', req.body.Name)
+      .input('WA_PR_Id', req.body.DistrictId)
       .execute(`sp_${tableName}_Insert`);
 
     res.json(result.recordset);
@@ -84,9 +87,9 @@ router.post('/sua', async (req, res) => {
   try {
     const pool = await poolPromise;
     const result = await pool.request()
-      .input('DTR_Id', req.body.Id)
-      .input('DTR_Name', req.body.Name)
-      .input('DTR_PR_Id', req.body.ProvinceId)
+      .input('WA_Id', req.body.Id)
+      .input('WA_Name', req.body.Name)
+      .input('WA_DTR_Id', req.body.DistrictId)
       .execute(`sp_${tableName}_Update`);
 
     res.json(result.recordset);
@@ -132,20 +135,21 @@ router.delete('/', async (req, res) => {
 router.get('/export', async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query('select d.Name , p.Name as ofProvince from Provinces as p, Districts as d where d.ProvinceId = p.Id');
+    const result = await pool.request().query('select w.Name, p.Name as PR_Name, d.Name as DTR_Name from Wards as w,Districts as d,Provinces as p Where w.DistrictId = d.Id and d.ProvinceId = p.Id');
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Huyện');
+    const worksheet = workbook.addWorksheet('Phường');
 
     worksheet.columns = [
       { header: 'Tên', key: 'Name', width: 30 },
-      { header: 'Thuộc Tỉnh/Thành phố', key: 'ofProvince', width: 30 },
+      { header: 'Tỉnh', key: 'PR_Name', width: 30 },
+      { header: 'Huyện', key: 'DTR_Name', width: 30 },
     ];      
 
     worksheet.addRows(result.recordset);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=district.xlsx');
+    res.setHeader('Content-Disposition', 'attachment; filename=wards.xlsx');
 
     await workbook.xlsx.write(res);
     res.end();
@@ -168,11 +172,13 @@ router.post('/import', upload.single('file'), async (req, res) => {
       const row = worksheet.getRow(i);
       const name = row.getCell(1).value;
       const province = row.getCell(2).value;
+      const district = row.getCell(3).value;
 
       try {
         await pool.request()
           .input('Name', name)
-          .input('DTR_PR_Name', province)
+          .input('WA_PR_Name', province)
+          .input('WA_DTR_Name', district)
           .execute(`sp_${tableName}_InsertFull`);
       } catch (err) {
         // Ghi lại dòng bị lỗi (ví dụ do trùng tên)
@@ -189,4 +195,5 @@ router.post('/import', upload.single('file'), async (req, res) => {
     res.status(500).send('Import thất bại');
   }
 });
+
 module.exports = router;

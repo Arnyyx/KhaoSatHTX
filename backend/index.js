@@ -9,8 +9,8 @@ app.use(cors());
 
 const provincesMld = require('./routes/ProvincesModule.js');
 app.use('/api/provinces', provincesMld);
-const districtsMld = require('./routes/DistrictsModule.js');
-app.use('/api/districts', districtsMld);
+// const districtsMld = require('./routes/DistrictsModule.js');
+// app.use('/api/districts', districtsMld);
 const wardsMld = require('./routes/WardsModule.js');
 app.use('/api/wards', wardsMld);
 

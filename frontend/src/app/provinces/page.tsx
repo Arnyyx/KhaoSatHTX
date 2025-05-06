@@ -202,7 +202,7 @@ export default function InfoTablePage() {
     // #endregion
     const fetchInfo = async (page: number) => {
         try {
-            const response = await fetch(`${API.provinces}/page/${page}?page_size=${Config.pageSize}&search=${encodeURIComponent(searchText)}`);
+            const response = await fetch(`${API.provinces}?page=${page}&page_size=${Config.pageSize}&search=${encodeURIComponent(searchText)}`);
             const data = await response.json();
             setInfoList(data.items);
             const total = Math.ceil(data.total / Config.pageSize);

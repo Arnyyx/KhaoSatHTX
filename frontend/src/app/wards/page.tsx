@@ -1,6 +1,5 @@
 "use client"
 
-import { API } from "@/lib/api"
 import { use, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card"
 import { Pencil, Trash2, BarChart2 } from "lucide-react";
+import { API } from "@/lib/api"
 import { Config } from "@/lib/config"
 import Pagination from '@/lib/Pagination';
 import {
@@ -26,22 +26,20 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 type Info = {
     Id: number
-    DistrictId: number
+    ProvinceId: number
     Name: string
-}
-type Info2 = {
-  Id: number
-  ProvinceId: number
-  Name: string
 }
 type ValuePair = {
     Id: number
     Name: string
 }
 
+
 export default function InfoTablePage() {
+    // #region Biến
     const [isImporting, setIsImporting] = useState(false);
     const [selectAll, setSelectAll] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -53,22 +51,20 @@ export default function InfoTablePage() {
 
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
     const [valuePairList, setValuePairList] = useState<ValuePair[]>([])
-    const [valuePairList0, setValuePairList0] = useState<ValuePair[]>([])
-    const [allDistricts, setAllDistricts] = useState<Info2[]>([]);
-    const [valueId, setValueId] = useState(-1)
     const [oldName, setOldName] = useState("");
     const [infoFormData, setInfoFormData] = useState({
-        DistrictId: -1,
+        ProvinceId: -1,
         Name: "",
     });
     const [editFormData, setEditFormData] = useState<Info>({
         Id: -1,
-        DistrictId: -1,
+        ProvinceId: -1,
         Name: "",
     });
     const [editMode, setEditMode] = useState(false);
     const [infoList, setInfoList] = useState<Info[]>([])
-    
+    // #endregion
+    // #region Insert - Edit
     const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (editMode) {
@@ -82,8 +78,8 @@ export default function InfoTablePage() {
     const handleInfoSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editMode) {
-            if (editFormData.DistrictId === -1) {
-                alert("Vui lòng chọn quận/huyện.");
+            if (editFormData.ProvinceId === -1) {
+                alert("Vui lòng chọn tỉnh/thành phố.");
                 return;
             }
             try {
@@ -96,20 +92,22 @@ export default function InfoTablePage() {
                 });
 
                 if (!res.ok) {
-                    const errText = await res.text(); // đọc lỗi trả về từ SQL
+                    const errText = await res.text();
                     alert("Lỗi: " + errText);
                     return;
                 }
 
                 console.log("Submitted successfully", editFormData);
-                setEditFormData({Id: -1, DistrictId: -1, Name: ""});
-                fetchInfo(currentPage)
+                setEditFormData({Id: -1, ProvinceId: -1, Name: ""})
+                setEditMode(false)
+                fetchInfo(currentPage);
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
         } else {
-            if (infoFormData.DistrictId === -1) {
-                alert("Vui lòng chọn quận/huyện.");
+            console.log(infoFormData.ProvinceId)
+            if (infoFormData.ProvinceId === -1) {
+                alert("Vui lòng chọn tỉnh/thành phố.");
                 return;
             }
             try {
@@ -122,58 +120,42 @@ export default function InfoTablePage() {
                 });
 
                 if (!res.ok) {
-                    const errText = await res.text(); // đọc lỗi trả về từ SQL
+                    const errText = await res.text();
                     alert("Lỗi: " + errText);
                     return;
                 }
 
                 console.log("Submitted successfully", infoFormData);
-                setInfoFormData({DistrictId: -1, Name: ""});
-                fetchInfo(currentPage)
+                setInfoFormData({ ProvinceId: -1, Name: ""})
+                fetchInfo(currentPage);
             } catch (error) {
                 console.error("Error submitting form:", error);
             }
         }
         setInfoDialogOpen(false);
     };
-    const commboBoxChange = (value: string, name: string) => {
-        if (name === "ProvinceId") {
-            setValueId(parseInt(value))
-            const filteredDistricts = allDistricts.filter(d => d.ProvinceId === Number(value));
-            setValuePairList(filteredDistricts); // cập nhật danh sách quận huyện
-            setInfoFormData({DistrictId: -1, Name: ""}) // Đặt lại giá trị form
-            setEditFormData({Id: -1, DistrictId: -1, Name: ""}) // Đặt lại giá trị form
-        } else if (name === "DistrictId") {
-            if (editMode) {
-                setEditFormData(prev => ({ ...prev, DistrictId: parseInt(value) }));
-            }
-            else {
-                console.log("id huyen" + value)
-                setInfoFormData(prev => ({ ...prev, DistrictId: parseInt(value) }));
-            }
+    const commboBoxChange = (value: string) => {
+        if (editMode) {
+            setEditFormData(prev => ({ ...prev, ProvinceId: parseInt(value) }));
+        }
+        else {
+            setInfoFormData(prev => ({ ...prev, ProvinceId: parseInt(value) }));
         }
     };
     const handleEditClick = (data: Info) => {
         setOldName(data.Name); // Lưu tên cũ để so sánh
-
-        console.log("id huyen " + data.DistrictId)
-        const provinceId = allDistricts.find(i => i.Id === data.DistrictId)?.ProvinceId;
-        if (provinceId !== undefined) {
-            setValueId(provinceId);
-        }
-
-        const filteredDistricts = allDistricts.filter(d => d.ProvinceId === Number(provinceId));
-        setValuePairList(filteredDistricts);
         setEditFormData(data); // Truyền thông tin vào form
-        
         setEditMode(true); // Chế độ sửa
         setInfoDialogOpen(true); // Mở Dialog
     };
-    const handleDelClick = async (data: { Id: number }) => {
+    // #endregion
+    // #region Del
+    const handleDelClick = async (data: {Id: number}) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
-                const res = await fetch(API.wards, {
+                setSelectedIds([data.Id])
+                const res = await fetch(`${API.wards}`, {
                     method: "DELETE",
                     headers: {
                         "Content-Type": "application/json",
@@ -195,6 +177,7 @@ export default function InfoTablePage() {
         } else {
             setSelectedIds([...selectedIds, id]);
         }
+        setSelectAll(false);
     };
     const handleSelectAllChange = () => {
         if (selectAll) {
@@ -205,13 +188,12 @@ export default function InfoTablePage() {
         }
         setSelectAll(!selectAll);
     };
-    
     const handleDeleteMultiple = async () => {
         const isConfirmed = window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} mục?`);
         if (!isConfirmed) return;
       
         try {
-            const res = await fetch(`${API.wards}`, {
+            const res = await fetch(`${API.wards    }`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
@@ -226,10 +208,13 @@ export default function InfoTablePage() {
           }
           setSelectedIds([]);
           fetchInfo(currentPage);
+          setSelectAll(false);
         } catch (error) {
           console.error("Error deleting multiple:", error);
         }
     };
+    // #endregion
+    // #region Import Excel
     const handleImport = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsImporting(true); // Bắt đầu loading
@@ -252,21 +237,17 @@ export default function InfoTablePage() {
             setIsImporting(false); // Kết thúc loading
         }
     };
-    
+    // #endregion
     const fetchInfo = async (page: number) => {
         try {
-            const response = await fetch(`${API.wards}/page/${page}?page_size=${Config.pageSize}&search=${encodeURIComponent(searchText)}`)
+            const response = await fetch(`${API.wards}?page=${page}&page_size=${Config.pageSize}&search=${encodeURIComponent(searchText)}`)
             const data = await response.json()
             setInfoList(data.items)
             setTotalPages(Math.ceil(data.total / Config.pageSize))
 
-            const res1 = await fetch(`${API.districts}/parent_list`)
-            const data1 = await res1.json()
-            setValuePairList0(data1)
-
-            const res2 = await fetch(`${API.districts}`)
-            const data2 = await res2.json()
-            setAllDistricts(data2)
+            const res = await fetch(`${API.wards}/parent_list`)
+            const data2 = await res.json()
+            setValuePairList(data2)
         } catch (error) {
             console.error("Error fetching data:", error)
         }
@@ -284,20 +265,20 @@ export default function InfoTablePage() {
                         <Dialog open={infoDialogOpen} onOpenChange={(isOpen) => {
                             setInfoDialogOpen(isOpen)
                             if (!isOpen) {
-                                setValueId(-1)
                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                setInfoFormData({ DistrictId: -1, Name: "" }) // Đặt lại giá trị form
-                                setEditFormData({ Id: -1, DistrictId: -1, Name: "" }) // Đặt lại giá trị form
+                                setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
                                 setOldName("") // Đặt lại tên cũ
                             }
                         }}>
                             <Button 
-                            variant="destructive" 
-                            disabled={selectedIds.length === 0}
-                            onClick={handleDeleteMultiple}
-                            >
+                                variant="destructive" 
+                                disabled={selectedIds.length === 0}
+                                onClick={handleDeleteMultiple}
+                                >
                                 Xóa {selectedIds.length} mục
                             </Button>
+
                             <DialogTrigger asChild>
                                 <Button>Thêm Phường/Xã</Button>
                             </DialogTrigger>
@@ -310,28 +291,11 @@ export default function InfoTablePage() {
                                         <Label htmlFor="ProvinceId">Tỉnh/Thành phố</Label>
                                         <Select
                                             name="ProvinceId"
-                                            value={valueId===-1 ? "" : String(valueId)}
-                                            onValueChange={(value) => commboBoxChange(value,"ProvinceId")}
+                                            value={editMode ? String(editFormData.ProvinceId) : (infoFormData.ProvinceId === -1 ? "" : String(infoFormData.ProvinceId))}
+                                            onValueChange={(value) => commboBoxChange(value)}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {valuePairList0.map((item) => (
-                                                    <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="DistrictId">Quận/Huyện</Label>
-                                        <Select
-                                            name="DistrictId"
-                                            value={editMode ? String(editFormData.DistrictId) : (infoFormData.DistrictId===-1 ? "" : String(infoFormData.DistrictId))}
-                                            onValueChange={(value) => commboBoxChange(value,"DistrictId")}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Chọn Quận/Huyện" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {valuePairList.map((item) => (
@@ -356,11 +320,10 @@ export default function InfoTablePage() {
                                             type="button"
                                             variant="outline"
                                             onClick={() => {
-                                                setValueId(-1)
                                                 setInfoDialogOpen(false)
                                                 setEditMode(false) // Đặt lại chế độ về thêm mới
-                                                setInfoFormData({ DistrictId: -1, Name: "" }) // Đặt lại giá trị form
-                                                setEditFormData({ Id: -1, DistrictId: -1, Name: "" }) // Đặt lại giá trị form
+                                                setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                                                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
                                                 setOldName("") // Đặt lại tên cũ
                                             }}
                                         >
@@ -396,7 +359,7 @@ export default function InfoTablePage() {
                                     </TableHead>
                                     <TableHead className="w-[120px]">Hành động</TableHead>
                                     <TableHead className="w-[300px]">Tên Phường/Xã</TableHead>
-                                    <TableHead className="w-[200px]">Thuộc Quận/Huyện</TableHead>
+                                    <TableHead className="w-[200px]">Thuộc Tỉnh/TP</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -412,7 +375,7 @@ export default function InfoTablePage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, DistrictId: item.DistrictId, Name: item.Name })}>
+                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, ProvinceId: item.ProvinceId, Name: item.Name })}>
                                                     <Pencil className="w-4 h-4 mr-1" /> Sửa
                                                 </Button>
                                                 <Button
@@ -425,7 +388,7 @@ export default function InfoTablePage() {
                                             </div>
                                         </TableCell>
                                         <TableCell>{item.Name}</TableCell>
-                                        <TableCell>{allDistricts.find(i => i.Id === item.DistrictId)?.Name}</TableCell>
+                                        <TableCell>{valuePairList.find(i => i.Id === item.ProvinceId)?.Name}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

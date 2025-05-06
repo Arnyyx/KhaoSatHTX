@@ -9,20 +9,20 @@ const router = express.Router();
 
 const tableName = "Provinces"
 
+// router.get('/', async (req, res) => {
+//   try {
+//     const pool = await poolPromise;
+//     const result = await pool.request().execute(`sp_${tableName}_GetAll`);
+//     res.json(result.recordset);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send('Database error');
+//   }
+// });
+
 router.get('/', async (req, res) => {
   try {
-    const pool = await poolPromise;
-    const result = await pool.request().execute(`sp_${tableName}_GetAll`);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Database error');
-  }
-});
-
-router.get('/page/:page', async (req, res) => {
-  try {
-    const pageIndex = parseInt(req.params.page, 10);
+    const pageIndex = req.query.page || 1;
     const search = req.query.search || '';
     const pageSize = req.query.page_size;
 
@@ -126,8 +126,8 @@ router.get('/export', async (req, res) => {
     const worksheet = workbook.addWorksheet('Tỉnh');
 
     worksheet.columns = [
-      { header: 'Tên', key: 'Name', width: 30 },
-      { header: 'Vùng', key: 'Region', width: 30 },
+      { header: 'Tên Tỉnh/Thành phố', key: 'Name', width: 30 },
+      { header: 'Vùng miền', key: 'Region', width: 30 },
     ];      
 
     worksheet.addRows(result.recordset);
@@ -148,6 +148,20 @@ router.post('/import', upload.single('file'), async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(req.file.path);
     const worksheet = workbook.getWorksheet(1);
+    
+    const expectedHeaders = ['Tên Tỉnh/Thành phố', 'Vùng miền'];
+    const actualHeaders = [
+      worksheet.getRow(1).getCell(1).value,
+      worksheet.getRow(1).getCell(2).value
+    ];
+
+    const isValid = expectedHeaders.every((header, index) => header === actualHeaders[index]);
+
+    if (!isValid) {
+      return res.status(400).json({
+        message: 'File Excel không đúng định dạng. Hãy chắc chắn rằng tiêu đề là: ' + expectedHeaders.join(', ')
+      });
+    }
 
     const pool = await poolPromise;
     const skippedRows = [];
@@ -156,6 +170,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
       const row = worksheet.getRow(i);
       const name = row.getCell(1).value;
       const region = row.getCell(2).value;
+      if (!name || !region || name.toString().trim() === '' || region.toString().trim() === '') {
+        return res.status(400).json({
+          message: `Dòng ${i} chứa ô trống. Vui lòng kiểm tra lại dữ liệu.`
+        });
+      }
 
       try {
         await pool.request()

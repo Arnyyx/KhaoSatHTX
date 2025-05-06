@@ -564,9 +564,9 @@ export default function AdminPage() {
                                     <Link href="/provinces" className="mr-4">
                                         <Button variant="outline">Tỉnh/Thành phố</Button>
                                     </Link>
-                                    <Link href="/districts" className="mr-4">
+                                    {/* <Link href="/districts" className="mr-4">
                                         <Button variant="outline">Quận/Huyện</Button>
-                                    </Link>
+                                    </Link> */}
                                     <Link href="/wards" className="mr-4">
                                         <Button variant="outline">Phường/Xã</Button>
                                     </Link>

@@ -9,20 +9,20 @@ const router = express.Router();
 
 const tableName = "Wards"
 
+// router.get('/', async (req, res) => {
+//   try {
+//     const pool = await poolPromise;
+//     const result = await pool.request().execute(`sp_${tableName}_GetAll`);
+//     res.json(result.recordset);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send('Database error');
+//   }
+// });
+
 router.get('/', async (req, res) => {
   try {
-    const pool = await poolPromise;
-    const result = await pool.request().execute(`sp_${tableName}_GetAll`);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Database error');
-  }
-});
-
-router.get('/page/:page', async (req, res) => {
-  try {
-    const pageIndex = parseInt(req.params.page, 10);
+    const pageIndex = req.query.page || 1;
     const search = req.query.search || '';
     const pageSize = req.query.page_size;
 
@@ -69,7 +69,7 @@ router.post('/', async (req, res) => {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('WA_Name', req.body.Name)
-      .input('WA_DTR_Id', req.body.DistrictId)
+      .input('WA_PR_Id', req.body.ProvinceId)
       .execute(`sp_${tableName}_Insert`);
 
     res.json(result.recordset);
@@ -89,7 +89,7 @@ router.post('/sua', async (req, res) => {
     const result = await pool.request()
       .input('WA_Id', req.body.Id)
       .input('WA_Name', req.body.Name)
-      .input('WA_DTR_Id', req.body.DistrictId)
+      .input('WA_PR_Id', req.body.ProvinceId)
       .execute(`sp_${tableName}_Update`);
 
     res.json(result.recordset);
@@ -135,15 +135,14 @@ router.delete('/', async (req, res) => {
 router.get('/export', async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query('select w.Name, p.Name as PR_Name, d.Name as DTR_Name from Wards as w,Districts as d,Provinces as p Where w.DistrictId = d.Id and d.ProvinceId = p.Id');
+    const result = await pool.request().query('select w.Name , p.Name as ofProvince from Provinces as p, Wards as w where w.ProvinceId = p.Id');
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Phường');
+    const worksheet = workbook.addWorksheet('Phường/Xã');
 
     worksheet.columns = [
-      { header: 'Tên', key: 'Name', width: 30 },
-      { header: 'Tỉnh', key: 'PR_Name', width: 30 },
-      { header: 'Huyện', key: 'DTR_Name', width: 30 },
+      { header: 'Tên Phường/Xã', key: 'Name', width: 30 },
+      { header: 'Thuộc Tỉnh/Thành phố', key: 'ofProvince', width: 30 },
     ];      
 
     worksheet.addRows(result.recordset);
@@ -165,6 +164,20 @@ router.post('/import', upload.single('file'), async (req, res) => {
     await workbook.xlsx.readFile(req.file.path);
     const worksheet = workbook.getWorksheet(1);
 
+    const expectedHeaders = ['Tên Phường/Xã', 'Thuộc Tỉnh/Thành phố'];
+    const actualHeaders = [
+      worksheet.getRow(1).getCell(1).value,
+      worksheet.getRow(1).getCell(2).value
+    ];
+
+    const isValid = expectedHeaders.every((header, index) => header === actualHeaders[index]);
+
+    if (!isValid) {
+      return res.status(400).json({
+        message: 'File Excel không đúng định dạng. Hãy chắc chắn rằng tiêu đề là: ' + expectedHeaders.join(', ')
+      });
+    }
+
     const pool = await poolPromise;
     const skippedRows = [];
 
@@ -172,18 +185,20 @@ router.post('/import', upload.single('file'), async (req, res) => {
       const row = worksheet.getRow(i);
       const name = row.getCell(1).value;
       const province = row.getCell(2).value;
-      const district = row.getCell(3).value;
+      if (!name || !province || name.toString().trim() === '' || province.toString().trim() === '') {
+        return res.status(400).json({
+          message: `Dòng ${i} chứa ô trống. Vui lòng kiểm tra lại dữ liệu.`
+        });
+      }
 
       try {
         await pool.request()
           .input('Name', name)
           .input('WA_PR_Name', province)
-          .input('WA_DTR_Name', district)
           .execute(`sp_${tableName}_InsertFull`);
       } catch (err) {
-        // Ghi lại dòng bị lỗi (ví dụ do trùng tên)
         skippedRows.push({ row: i, name, error: err.message });
-        continue; // Tiếp tục với dòng sau
+        continue;
       }
     }
     res.json({
@@ -195,5 +210,4 @@ router.post('/import', upload.single('file'), async (req, res) => {
     res.status(500).send('Import thất bại');
   }
 });
-
 module.exports = router;
