@@ -20,11 +20,14 @@ app.use('/api/wards', wardsMld);
 
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
-const surveysRouter = require('./routes/surveys');
-app.use('/api/surveys', surveysRouter);
+const surveyRoutes = require('./routes/surveysRouter');
+app.use('/api/surveys', surveyRoutes);
 
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
+
+const questionRoutes = require('./routes/questionsRouter');
+app.use('/api/questions', questionRoutes);
 
 const port = process.env.PORT;
 app.listen(port, () => {

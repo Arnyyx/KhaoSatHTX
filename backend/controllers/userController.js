@@ -5,36 +5,17 @@ const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 const { poolPromise } = require("../db");
 
-// exports.getNonAdminUsers = async (req, res) => {
-//     try {
-//         console.log("Fetching non-admin users");
-//         const users = await User.findAll({
-//             // where: {
-//             //     Role: {
-//             //         [Op.ne]: "admin",
-//             //     },
-//             // },
-//         });
-//         console.log(`Found ${users.length} non-admin users`);
-//         res.status(200).json({ message: "Lấy danh sách user thành công", users });
-//     } catch (error) {
-//         console.error("Error in getNonAdminUsers:", error);
-//         res.status(400).json({ message: "Lỗi khi lấy danh sách user", error: error.message });
-//     }
-// };
 
 exports.getNonAdminUsers = async (req, res) => {
     try {
         console.log("Fetching all users with raw query");
         const data = await User.findAll();
-        console.log(data);
         res.status(200).json({ message: "Lấy danh sách user thành công", data });
     } catch (error) {
         console.error("Error in getNonAdminUsers:", error);
         res.status(400).json({ message: "Lỗi khi lấy danh sách user", error: error.message });
     }
 };
-
 
 
 // Thêm một user
