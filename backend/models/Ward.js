@@ -28,5 +28,4 @@ const Ward = sequelize.define(
         timestamps: false,
     }
 );
-
 module.exports = Ward;

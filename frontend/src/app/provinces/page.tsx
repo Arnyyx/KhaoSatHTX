@@ -206,7 +206,7 @@ export default function InfoTablePage() {
             const data = await response.json();
             setInfoList(data.items);
             const total = Math.ceil(data.total / Config.pageSize);
-            setTotalPages(total);
+            setTotalPages(data.total);
 
             if (data.items.length === 0 && page > 1) {
                 setCurrentPage(page - 1);
@@ -352,9 +352,10 @@ export default function InfoTablePage() {
                             </TableBody>
                         </Table>
                     </div>
+                    <label>{totalPages} bản ghi</label>
                     <Pagination
                         currentPage={currentPage}
-                        totalPages={totalPages}
+                        totalPages={Math.ceil(totalPages / Config.pageSize)}
                         onPageChange={(page) => setCurrentPage(page)}
                     />
                     <div className="overflow-x-auto">
