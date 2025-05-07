@@ -6,17 +6,31 @@ const sequelize = require("../config/database");
 const { poolPromise } = require("../db");
 
 
-exports.getNonAdminUsers = async (req, res) => {
+exports.getAllUsers = async (req, res) => {
     try {
         console.log("Fetching all users with raw query");
         const data = await User.findAll();
         res.status(200).json({ message: "Lấy danh sách user thành công", data });
     } catch (error) {
-        console.error("Error in getNonAdminUsers:", error);
+        console.error("Error in getAllUsers:", error);
         res.status(400).json({ message: "Lỗi khi lấy danh sách user", error: error.message });
     }
 };
 
+exports.getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findByPk(id);
+        if (user) {
+            res.status(200).json({ message: "Lấy user thành công", user });
+        } else {
+            res.status(404).json({ message: "Không tìm thấy user" });
+        }
+    } catch (error) {
+        console.error("Error in getUserById:", error);
+        res.status(400).json({ message: "Lỗi khi lấy user", error: error.message });
+    }
+};
 
 // Thêm một user
 exports.createUser = async (req, res) => {
@@ -113,18 +127,30 @@ exports.bulkCreateUsers = async (req, res) => {
     }
 };
 
-// Lấy danh sách user có Role là HTX hoặc QTD với ProvinceId
-exports.getUsersByRoleAndProvince = async (req, res) => {
+exports.getUsersByProvince = async (req, res) => {
     try {
-        const { provinceId } = req.params;
-        const users = await User.findAll({
+        const { provinceId, page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+        const users = await User.findAndCountAll({
             where: {
                 Role: ["HTX", "QTD"],
                 ProvinceId: provinceId,
             },
+            offset: parseInt(offset),
+            limit: parseInt(limit),
         });
-        res.status(200).json({ message: "Lấy danh sách user thành công", users });
+
+        res.status(200).json({
+            message: "Lấy danh sách user thành công",
+            users: users.rows,
+            total: users.count,
+            page: parseInt(page),
+            limit: parseInt(limit),
+        });
     } catch (error) {
-        res.status(400).json({ message: "Lỗi khi lấy danh sách user", error: error.message });
+        res.status(400).json({
+            message: "Lỗi khi lấy danh sách user",
+            error: error.message,
+        });
     }
 };

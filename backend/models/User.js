@@ -47,10 +47,6 @@ const User = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
         },
-        DistrictId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-        },
         WardId: {
             type: DataTypes.INTEGER,
             allowNull: true,
