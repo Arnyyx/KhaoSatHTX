@@ -10,9 +10,15 @@ app.use(cors());
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 const surveysRouter = require('./routes/surveys');
-app.use('/api/surveys', surveysRouter);
+const surveysUser = require('./routes/users');
+const surveysProfile = require('./routes/profile');
 
-const port = process.env.PORT || 3000;
+app.use('/api/surveys', surveysRouter);
+app.use('/api/profile', surveysProfile);
+app.use('/api/users', surveysUser);
+
+
+const port = process.env.PORT;
 app.listen(port, () => {
     console.log(`🚀 Server is running on http://localhost:${port}`);
 });

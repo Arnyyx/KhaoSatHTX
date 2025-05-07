@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button";
+import { API } from "@/lib/api"
+import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'; // Import js-cookie
+import { useUser } from '@/context/UserContext'
+import { log } from "console";
 
 interface User {
   Id: number
@@ -29,13 +35,71 @@ interface User {
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
+  const router = useRouter();
+  const { logout } = useUser()
+  const token = Cookies.get('token'); // Lấy token từ cookie
 
   useEffect(() => {
-    fetch("http://localhost:3001/users/1")
-      .then(res => res.json())
-      .then(data => setUser(data))
-      .catch(console.error)
-  }, [])
+    async function checkAuth() {
+      const res = await fetch('/api/auth/validate', {
+        method: 'POST', headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      if (!res.ok) {
+        router.push('/')
+      }
+    }
+
+    async function fetchProfile() {
+      try {
+        if (!token) {
+          console.error('No token found')
+          return
+        }
+
+        const response = await fetch(API.profile, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to fetch profile')
+        }
+
+        const data = await response.json()
+        setUser(data)
+        console.log('Profile loaded', data)
+      } catch (error) {
+        console.error('Error loading profile:', error)
+      }
+    }
+
+    checkAuth()
+    fetchProfile()
+  }, [token]) // Thêm token vào dependency array
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch(`${API.users}/logout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          
+        },
+      });
+
+      if (response.ok) {
+        logout() // Gọi hàm logout từ context
+        window.location.href = '/'; // Redirect
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-muted py-10 px-4">
@@ -67,6 +131,16 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
+        <div>
+          <Button variant="outline" className="mt-4 w-full" onClick={handleLogout}>
+            Đăng xuất
+          </Button>
+        </div>
+        <div>
+          <Button variant="outline" className="mt-4 w-full" onClick={() => window.location.href = '/'}>
+            Trang chủ
+          </Button>
+        </div>
       </div>
     </main>
   )
