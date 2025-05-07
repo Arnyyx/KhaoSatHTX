@@ -11,11 +11,11 @@ sequelize.sync({ force: false }).then(() => {
     console.log("Đồng bộ database thành công");
 });
 
-const provincesMld = require('./routes/ProvincesModule.js');
+// const provincesMld = require('./routes/ProvincesModule.js');
+const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
-// const districtsMld = require('./routes/DistrictsModule.js');
-// app.use('/api/districts', districtsMld);
-const wardsMld = require('./routes/WardsModule.js');
+// const wardsMld = require('./routes/WardsModule.js');
+const wardsMld = require('./routes/wardsRounter.js');
 app.use('/api/wards', wardsMld);
 
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
