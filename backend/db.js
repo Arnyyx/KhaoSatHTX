@@ -15,7 +15,11 @@ const config = {
 const poolConnect = new sql.ConnectionPool(config)
   .connect()
   .then(pool => {
+<<<<<<< HEAD
     console.log('✅ Database Connected');
+=======
+    // console.log('✅ Connected to SQL Server');
+>>>>>>> 4ff80e54b52771970ab60c45cd54aebffd4252d3
     return pool;
   })
   .catch(err => {

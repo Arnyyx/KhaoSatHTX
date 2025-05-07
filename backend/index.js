@@ -1,6 +1,8 @@
 const express = require('express');
-const { poolPromise } = require('./db');
+const sequelize = require("./config/database");
+require("./models");
 const cors = require('cors');
+const models = require('./models/index');
 require('dotenv').config();
 
 const app = express();
@@ -15,6 +17,15 @@ app.use(cors({
 // Middleware đọc JSON
 app.use(express.json());
 
+sequelize.sync({ force: false }).then(() => {
+    console.log("Đồng bộ database thành công");
+});
+
+const provincesMld = require('./routes/provincesRouter.js');
+app.use('/api/provinces', provincesMld);
+const wardsMld = require('./routes/wardsRounter.js');
+app.use('/api/wards', wardsMld);
+
 // Route mặc định
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
@@ -22,12 +33,18 @@ app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 const loginRouter = require('./routes/login');
 app.use('/apis/login', loginRouter);
 
-const surveysRouter = require('./routes/survey');
-app.use('/api/survey', surveysRouter);
+const surveyRoutes = require('./routes/surveyRouter');
+app.use('/api/survey', surveyRoutes);
+
+const userRoutes = require('./routes/userRoutes');
+app.use('/api/users', userRoutes);
+
+const questionRoutes = require('./routes/questionsRouter');
+app.use('/api/questions', questionRoutes);
 
 
 // Chạy server
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 app.listen(port, () => {
   console.log(`🚀 Server is running at http://localhost:${port}`);
 });
