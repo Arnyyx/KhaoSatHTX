@@ -1,5 +1,6 @@
 const express = require('express');
 const sequelize = require("./config/database");
+require("./models");
 const cors = require('cors');
 require('dotenv').config();
 
@@ -11,10 +12,8 @@ sequelize.sync({ force: false }).then(() => {
     console.log("Đồng bộ database thành công");
 });
 
-// const provincesMld = require('./routes/ProvincesModule.js');
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
-// const wardsMld = require('./routes/WardsModule.js');
 const wardsMld = require('./routes/wardsRounter.js');
 app.use('/api/wards', wardsMld);
 

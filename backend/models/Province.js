@@ -1,3 +1,4 @@
+// Province.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
@@ -24,5 +25,4 @@ const Province = sequelize.define(
         timestamps: false,
     }
 );
-
 module.exports = Province;
