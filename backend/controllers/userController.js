@@ -4,16 +4,60 @@ const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 const { poolPromise } = require("../db");
-
+const Province = require("../models/Province");
+const Ward = require("../models/Ward");
 
 exports.getAllUsers = async (req, res) => {
     try {
-        console.log("Fetching all users with raw query");
-        const data = await User.findAll();
-        res.status(200).json({ message: "Lấy danh sách user thành công", data });
-    } catch (error) {
-        console.error("Error in getAllUsers:", error);
-        res.status(400).json({ message: "Lỗi khi lấy danh sách user", error: error.message });
+        const { page, limit, search } = req.query;
+
+        if (page && limit) {
+            const offset = (page - 1) * limit;
+            const where = search ? {
+                Username: { [Op.like]: `%${search}%`, },
+                Name: { [Op.like]: `%${search}%`, },
+                Email: { [Op.like]: `%${search}%`, },
+                OrganizationName: { [Op.like]: `%${search}%`, },
+                Address: { [Op.like]: `%${search}%`, },
+                Position: { [Op.like]: `%${search}%`, },
+                NumberCount: { [Op.like]: `%${search}%`, },
+                EstablishedDate: { [Op.like]: `%${search}%`, },
+                Member: { [Op.like]: `%${search}%`, },
+                Status: { [Op.like]: `%${search}%`, },
+            } : {};
+            const users = await User.findAndCountAll({
+                where,
+                offset: parseInt(offset),
+                limit: parseInt(limit),
+                include: [{
+                    association: 'Province',
+                    attributes: ['Name']
+                },
+                {
+                    association: 'Ward',
+                    attributes: ['Name']
+                }]
+
+            });
+            return res.status(200).json(users);
+        }
+
+        const users = await User.findAll({
+            include: [
+                {
+                    association: 'Province',
+                    attributes: ['Name']
+                },
+                {
+                    association: 'Ward',
+                    attributes: ['Name']
+                }
+            ]
+
+        });
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(400).json({ message: "Lỗi", error: err.message });
     }
 };
 

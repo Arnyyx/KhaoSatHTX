@@ -1,5 +1,8 @@
 const Survey = require("./Survey");
 const Question = require("./Question");
+const User = require("./User");
+const Province = require("./Province");
+const Ward = require("./Ward");
 
 // Thiết lập mối quan hệ
 Survey.hasMany(Question, {
@@ -9,4 +12,21 @@ Survey.hasMany(Question, {
 Question.belongsTo(Survey, {
     foreignKey: "SurveyId",
     as: "Survey",
+});
+
+User.belongsTo(Province, {
+    foreignKey: "ProvinceId",
+    as: "Province",
+});
+Province.hasMany(User, {
+    foreignKey: "ProvinceId",
+    as: "Users",
+});
+User.belongsTo(Ward, {
+    foreignKey: "WardId",
+    as: "Ward",
+});
+Ward.hasMany(User, {
+    foreignKey: "WardId",
+    as: "Users",
 });

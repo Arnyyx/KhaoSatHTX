@@ -15,10 +15,15 @@ export const API = {
 }
 
 export const surveyService = {
-    getSurveys: async (page: number = initialPage, limit: number = initialLimit, search: string = "") => {
+    getSurveysByPage: async (page: number = initialPage, limit: number = initialLimit, search: string = "") => {
         const response = await axios.get(
             `${BASE_URL}/surveys?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`
         );
+        return response.data;
+    },
+
+    getSurveys: async () => {
+        const response = await axios.get(`${BASE_URL}/surveys`);
         return response.data;
     },
 
@@ -66,6 +71,11 @@ export const surveyService = {
 };
 
 export const userService = {
+    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = "") => {
+        const response = await axios.get(`${BASE_URL}/users?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+        return response.data;
+    },
+
     getUsersByRoleAndProvince: async (role: string, provinceId: number) => {
         const response = await axios.get(`${BASE_URL}/users/role-province?role=${role}&provinceId=${provinceId}`);
         return response.data;
@@ -89,5 +99,24 @@ export const userService = {
     deleteUser: async (id: number) => {
         const response = await axios.delete(`${BASE_URL}/users/${id}`);
         return response.data;
+    },
+    deleteMultipleUsers: async (ids: number[]) => {
+        const response = await axios.delete(`${BASE_URL}/users`, { data: { ids } });
+        return response.data;
     }
 };
+
+export const provinceService = {
+    getProvinces: async () => {
+        const response = await axios.get(`${BASE_URL}/provinces`);
+        return response.data;
+    }
+};
+
+export const wardService = {
+    getWards: async () => {
+        const response = await axios.get(`${BASE_URL}/wards`);
+        return response.data;
+    }
+};
+

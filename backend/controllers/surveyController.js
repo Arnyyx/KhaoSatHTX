@@ -5,48 +5,32 @@ const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 const { poolPromise } = require("../db");
 
+
 exports.getAllSurveys = async (req, res) => {
     try {
-        console.log("Fetching all surveys with raw query");
+        const { page, limit, search } = req.query;
 
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const search = req.query.search || "";
-        const offset = (page - 1) * limit;
+        if (page && limit) {
+            const offset = (page - 1) * limit;
+            const where = search ? {
+                Title: {
+                    [Op.like]: `%${search}%`,
+                },
+            } : {};
+            const surveys = await Survey.findAndCountAll({
+                where,
+                offset: parseInt(offset),
+                limit: parseInt(limit),
+            });
+            return res.status(200).json(surveys);
+        }
 
-        const where = search
-            ? {
-                [Op.or]: [
-                    { Title: { [Op.like]: `%${search}%` } },
-                    { Description: { [Op.like]: `%${search}%` } },
-                ],
-            }
-            : {};
-
-        const { count, rows } = await Survey.findAndCountAll({
-            where,
-            limit,
-            offset,
-        });
-
-        const totalPages = Math.ceil(count / limit);
-
-        res.status(200).json({
-            message: "Lấy danh sách survey thành công",
-            data: rows,
-            pagination: {
-                totalItems: count,
-                totalPages: totalPages,
-                currentPage: page,
-                limit: limit,
-            },
-        });
-    } catch (error) {
-        console.error("Error in getAllSurveys:", error);
-        res.status(400).json({ message: "Lỗi khi lấy danh sách survey", error: error.message });
+        const surveys = await Survey.findAll();
+        res.status(200).json(surveys);
+    } catch (err) {
+        res.status(400).json({ message: "Lỗi", error: err.message });
     }
 };
-
 
 // Thêm một survey
 exports.createSurvey = async (req, res) => {
