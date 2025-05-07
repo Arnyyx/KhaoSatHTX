@@ -2,6 +2,8 @@
 import axios from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+const initialPage = 1
+const initialLimit = 10
 
 export const API = {
     surveys: `${BASE_URL}/surveys`,
@@ -13,7 +15,7 @@ export const API = {
 }
 
 export const surveyService = {
-    getSurveys: async (page: number = 1, limit: number = 10, search: string = "") => {
+    getSurveys: async (page: number = initialPage, limit: number = initialLimit, search: string = "") => {
         const response = await axios.get(
             `${BASE_URL}/surveys?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`
         );
@@ -40,7 +42,7 @@ export const surveyService = {
         return response.data;
     },
 
-    getQuestions: async (surveyId: number, page: number = 1, limit: number = 10) => {
+    getQuestions: async (surveyId: number, page: number = initialPage, limit: number = initialLimit) => {
         const response = await axios.get(
             `${BASE_URL}/questions/by-survey?surveyId=${surveyId}&page=${page}&limit=${limit}`
         );
@@ -63,3 +65,29 @@ export const surveyService = {
     },
 };
 
+export const userService = {
+    getUsersByRoleAndProvince: async (role: string, provinceId: number) => {
+        const response = await axios.get(`${BASE_URL}/users/role-province?role=${role}&provinceId=${provinceId}`);
+        return response.data;
+    },
+
+    getUserById: async (id: number) => {
+        const response = await axios.get(`${BASE_URL}/users/${id}`);
+        return response.data;
+    },
+
+    createUser: async (data: any) => {
+        const response = await axios.post(`${BASE_URL}/users`, data);
+        return response.data;
+    },
+
+    updateUser: async (id: number, data: any) => {
+        const response = await axios.put(`${BASE_URL}/users/${id}`, data);
+        return response.data;
+    },
+
+    deleteUser: async (id: number) => {
+        const response = await axios.delete(`${BASE_URL}/users/${id}`);
+        return response.data;
+    }
+};

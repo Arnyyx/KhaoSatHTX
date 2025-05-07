@@ -3,11 +3,15 @@ const router = express.Router();
 const userController = require("../controllers/userController");
 const upload = require("../middleware/upload");
 
-router.get("/", userController.getNonAdminUsers);
+router.get("/", userController.getAllUsers);
+router.get("/:id", userController.getUserById);
+router.get("/province/", userController.getUsersByProvince);
+
 router.post("/", userController.createUser);
-router.put("/:id", userController.updateUser);
-router.delete("/:id", userController.deleteUser);
 router.post("/bulk", upload.single("file"), userController.bulkCreateUsers);
-router.get("/role-province/:provinceId", userController.getUsersByRoleAndProvince);
+
+router.put("/:id", userController.updateUser);
+
+router.delete("/:id", userController.deleteUser);
 
 module.exports = router;
