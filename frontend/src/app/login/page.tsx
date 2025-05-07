@@ -1,35 +1,74 @@
-"use client"
+"use client";
 
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import Link from "next/link"
+import { login } from '@/app/apis/login';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 export default function LoginPage() {
-    return (
-        <main className="min-h-screen flex items-center justify-center bg-muted px-4">
-            <Card className="w-full max-w-md shadow-lg border border-border">
-                <CardHeader className="text-center space-y-1">
-                    <CardTitle className="text-2xl font-bold text-primary">Chào mừng trở lại</CardTitle>
-                    <CardDescription>Vui lòng đăng nhập để tiếp tục</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Tên đăng nhập</label>
-                        <Input placeholder="Nhập tên đăng nhập" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">Mật khẩu</label>
-                        <Input type="password" placeholder="Nhập mật khẩu" />
-                    </div>
-                    <Link href="/profile">
-                        <Button className="w-full bg-primary text-white hover:bg-primary/90 transition">Đăng nhập</Button>
-                    </Link>
-                    <p className="text-sm text-center text-muted-foreground">
-                        Chưa có tài khoản? <Link href="#" className="text-primary hover:underline">Liên hệ quản trị viên</Link>
-                    </p>
-                </CardContent>
-            </Card>
-        </main>
-    )
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const router = useRouter();
+
+  useEffect(() => {
+    const ID_user = Cookies.get("ID_user");
+    console.log("🔍 DEBUG - Cookie hiện tại:", ID_user);
+
+    if (ID_user) {
+      router.push("/profile");
+    }
+  }, [router]);
+
+  const handleLogin = async () => {
+    const data = await login(username, password);
+    console.log("🔁 DEBUG - Kết quả từ API login:", data);
+  
+    if (data.success && data.ID_user && data.role) {
+      Cookies.set("ID_user", data.ID_user, { expires: 1 });
+      Cookies.set("role", data.role.toLowerCase(), { expires: 1 });
+      router.push("/profile");
+    } else {
+      alert(data.message || "Đăng nhập thất bại.");
+    }
+  
+  };
+
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-muted px-4">
+      <Card className="w-full max-w-md shadow-lg border border-border">
+        <CardHeader className="text-center space-y-1">
+          <CardTitle className="text-2xl font-bold text-primary">Chào mừng trở lại</CardTitle>
+          <CardDescription>Vui lòng đăng nhập để tiếp tục</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Tên đăng nhập</label>
+            <Input
+              placeholder="Nhập tên đăng nhập"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Mật khẩu</label>
+            <Input
+              type="password"
+              placeholder="Nhập mật khẩu"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <Button
+            className="w-full bg-primary text-white hover:bg-primary/90 transition"
+            onClick={handleLogin}
+          >
+            Đăng nhập
+          </Button>
+        </CardContent>
+      </Card>
+    </main>
+  );
 }
