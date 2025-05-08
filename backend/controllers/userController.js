@@ -197,3 +197,49 @@ exports.getUsersByProvince = async (req, res) => {
         });
     }
 };
+
+exports.userLogin = async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+      const user = await User.findOne({
+        where: {
+            Username: username, 
+            Password: password 
+        } // Nếu chưa mã hóa mật khẩu
+      });
+  
+      if (!user) {
+        return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
+      }
+  
+      const isLocked = user.IsLocked === true || user.IsLocked === 1;
+      const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
+  
+      if (isLocked) {
+        const message = surveyStatus
+          ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
+          : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
+        return res.json({ success: false, message });
+      }
+  
+      res.cookie('ID_user', user.Id, {
+        httpOnly: true,
+        sameSite: 'Lax',
+        secure: false,
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+  
+      res.cookie('role', user.Role.toLowerCase(), {
+        httpOnly: true,
+        sameSite: 'Lax',
+        secure: false,
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+  
+      return res.json({ success: true, user });
+    } catch (err) {
+      console.error('Login error:', err);
+      return res.status(500).send('Server Error');
+    }
+};

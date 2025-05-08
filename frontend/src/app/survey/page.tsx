@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API } from "@/lib/api"
 import Cookies from "js-cookie";
 
 interface Survey {
-  ID_survey: number;
+  Id: number;
   Title: string;
   Description: string;
   Status: string;
 }
 
 interface Question {
-  ID_Q: number;
-  question: string;
+  Id: number;
+  QuestionContent: string;
 }
 
 export default function SurveyPage() {
@@ -43,12 +44,12 @@ export default function SurveyPage() {
 
     const fetchData = async () => {
       try {
-        const userRes = await fetch(`http://localhost:4000/api/profile/${ID_user}`);
+        const userRes = await fetch(`${API.users}/${ID_user}`);
         if (!userRes.ok) throw new Error("Không lấy được thông tin người dùng.");
-        const user = await userRes.json();
+        const profile = await userRes.json();
 
-        const role = user.role?.toLowerCase();
-        const type = user.type?.toLowerCase();
+        const role = profile.user.Role?.toLowerCase();
+        const type = profile.user.Type?.toLowerCase();
 
         const surveyId =
           role === "htx"
@@ -61,11 +62,11 @@ export default function SurveyPage() {
             ? 2
             : undefined;
 
-        if (!surveyId) throw new Error("Không xác định được surveyId từ vai trò và loại người dùng.");
+        if (!surveyId) throw new Error("Không xác định được vai trò người dùng.");
 
         const [surveyRes, questionRes] = await Promise.all([
-          fetch(`http://localhost:4000/api/survey/${surveyId}`),
-          fetch(`http://localhost:4000/api/question/${surveyId}`),
+          fetch(`${API.surveys}/${surveyId}`),
+          fetch(`${API.questions}/by-survey?surveyId=${surveyId}`),
         ]);
 
         if (!surveyRes.ok) throw new Error("Không thể lấy thông tin khảo sát.");
@@ -73,11 +74,12 @@ export default function SurveyPage() {
 
         const surveyData = await surveyRes.json();
         const questionData = await questionRes.json();
+        console.log('Question info',questionData.data);
 
-        if (!Array.isArray(questionData)) throw new Error("Dữ liệu câu hỏi không hợp lệ.");
+        if (!Array.isArray(questionData.data)) throw new Error("Dữ liệu câu hỏi không hợp lệ.");
 
         setSurvey(surveyData);
-        setQuestions(questionData);
+        setQuestions(questionData.data);
       } catch (err: any) {
         console.error("❌ Lỗi khi tải dữ liệu khảo sát:", err);
         setError(err.message || "Đã xảy ra lỗi.");
@@ -103,7 +105,7 @@ export default function SurveyPage() {
         answer: answerValueMap[answerText],
       }));
 
-      const res = await fetch("http://localhost:4000/api/result", {
+      const res = await fetch(`${API.result}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -148,18 +150,18 @@ export default function SurveyPage() {
         <h2 className="text-xl font-semibold mb-4">Câu hỏi khảo sát</h2>
         {questions.length > 0 ? (
           questions.map((q) => (
-            <div key={q.ID_Q} className="mb-4">
-              <p className="font-medium">{q.question}</p>
+            <div key={q.Id} className="mb-4">
+              <p className="font-medium">{q.QuestionContent}</p>
               <div className="mt-2 space-x-4">
                 {Object.keys(answerValueMap).map((option) => (
                   <label key={option}>
                     <input
                       type="radio"
-                      name={`question-${q.ID_Q}`}
+                      name={`question-${q.Id}`}
                       value={option}
-                      checked={answers[q.ID_Q] === option}
+                      checked={answers[q.Id] === option}
                       onChange={() =>
-                        setAnswers((prev) => ({ ...prev, [q.ID_Q]: option }))
+                        setAnswers((prev) => ({ ...prev, [q.Id]: option }))
                       }
                       className="mr-1"
                     />

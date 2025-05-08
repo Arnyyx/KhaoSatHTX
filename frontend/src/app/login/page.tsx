@@ -26,9 +26,9 @@ export default function LoginPage() {
     const data = await login(username, password);
     console.log("🔁 DEBUG - Kết quả từ API login:", data);
   
-    if (data.success && data.ID_user && data.role) {
-      Cookies.set("ID_user", data.ID_user, { expires: 1 });
-      Cookies.set("role", data.role.toLowerCase(), { expires: 1 });
+    if (data.success && data.user.Id && data.user.Role) {
+      Cookies.set("ID_user", data.user.Id, { expires: 1 });
+      Cookies.set("role", data.user.Role.toLowerCase(), { expires: 1 });
       router.push("/profile");
     } else {
       alert(data.message || "Đăng nhập thất bại.");

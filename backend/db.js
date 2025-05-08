@@ -1,5 +1,5 @@
-// db.js
 const sql = require('mssql');
+require('dotenv').config();
 
 const config = {
   user: 'sa',
@@ -12,17 +12,14 @@ const config = {
   },
 };
 
-const poolConnect = new sql.ConnectionPool(config)
+const poolPromise = new sql.ConnectionPool(config)
   .connect()
   .then(pool => {
     // console.log('✅ Connected to SQL Server');
     return pool;
   })
-  .catch(err => {
-    console.error('❌ Database Connection Failed!', err);
-  });
+  .catch(err => console.error('❌ Database Connection Failed!', err));
 
-// Hàm query wrapper
 async function query(queryString, params = []) {
   const pool = await poolConnect;
   const request = pool.request();
@@ -38,11 +35,6 @@ async function query(queryString, params = []) {
 
   return request.query(parsedQuery);
 }
-
-
-
 module.exports = {
-  sql,
-  poolConnect,
-  query, 
+  sql, poolPromise, query
 };

@@ -23,6 +23,17 @@ app.use(express.json());
 sequelize.sync({ force: false }).then(() => {
     console.log("Đồng bộ database thành công");
 });
+// app.use('/api/login', require('./routes/login'));
+// app.use('/api/profile', require('./routes/profile'));
+// app.use('/api', require('./routes/userRoutes_tmp'));
+
+// app.use('/api', require('./routes/survey_tmp'));
+app.use('/api/survey', require('./routes/survey_tmp'));
+app.use('/api/question', require('./routes/tmp_question'));
+app.use('/api/result', require('./routes/result'));
+
+
+
 
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
@@ -37,7 +48,7 @@ const loginRouter = require('./routes/login');
 app.use('/api/login', loginRouter);
 
 const surveyRoutes = require('./routes/surveysRouter');
-app.use('/api/survey', surveyRoutes);
+app.use('/api/surveys', surveyRoutes);
 
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);

@@ -4,7 +4,20 @@ const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 
-
+exports.getSurveysById = async (req, res) => { 
+    try {
+        const { id } = req.params;
+        const survey = await Survey.findByPk(id);
+        if (survey) {
+            res.status(200).json({ message: "Lấy survey thành công", survey });
+        } else {
+            res.status(404).json({ message: "Không tìm thấy survey" });
+        }
+    } catch (error) {
+        console.error("Error in getSurveysById:", error);
+        res.status(400).json({ message: "Lỗi khi lấy survey", error: error.message });
+    }
+}
 exports.getAllSurveys = async (req, res) => {
     try {
         const { page, limit, search } = req.query;

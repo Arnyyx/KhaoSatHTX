@@ -46,9 +46,9 @@ router.post('/', async (req, res) => {
       
         return res.json({
             success: true,
-            ID_user: user.ID_user,
-            role: user.role
+            user
           });
+          
           
             
     } else {

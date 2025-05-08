@@ -1,4 +1,6 @@
 // login.ts
+
+import { API } from "@/lib/api"
 export const login = async (username: string, password: string) => {
   try {
     const res = await fetch('http://localhost:4000/api/login', {
