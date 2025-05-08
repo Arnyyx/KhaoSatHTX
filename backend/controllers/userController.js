@@ -3,7 +3,6 @@ const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
-const { poolPromise } = require("../db");
 const Province = require("../models/Province");
 const Ward = require("../models/Ward");
 
