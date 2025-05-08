@@ -20,18 +20,6 @@ app.use(express.json());
 sequelize.sync({ force: false }).then(() => {
     console.log("Đồng bộ database thành công");
 });
-// app.use('/api/login', require('./routes/login'));
-// app.use('/api/profile', require('./routes/profile'));
-// app.use('/api', require('./routes/userRoutes_tmp'));
-
-// app.use('/api', require('./routes/survey_tmp'));
-app.use('/api/survey', require('./routes/survey_tmp'));
-app.use('/api/question', require('./routes/tmp_question'));
-app.use('/api/result', require('./routes/result'));
-
-
-
-
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
 const wardsMld = require('./routes/wardsRounter.js');
@@ -41,8 +29,6 @@ app.use('/api/wards', wardsMld);
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 // Import router
-const loginRouter = require('./routes/login');
-app.use('/apis/login', loginRouter);
 
 const surveyRoutes = require('./routes/surveysRouter');
 app.use('/api/surveys', surveyRoutes);
@@ -53,7 +39,8 @@ app.use('/api/users', userRoutes);
 const questionRoutes = require('./routes/questionsRouter');
 app.use('/api/questions', questionRoutes);
 
-
+const resultRoutes = require('./routes/resultsRouter.js');
+app.use('/api/results', resultRoutes)
 // Chạy server
 const port = process.env.PORT;
 app.listen(port, () => {
