@@ -1,20 +1,8 @@
 "use client";
 
-<<<<<<< HEAD
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Button } from "@/components/ui/button";
-import { API } from "@/lib/api"
-import { useRouter } from 'next/navigation'
-import Cookies from 'js-cookie'; // Import js-cookie
-import { useUser } from '@/context/UserContext'
-import { log } from "console";
-=======
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
->>>>>>> 84d2b83e031f585e36b9ef5e352ba20f9fafa21f
 
 interface UserInfo {
   username: string;
@@ -30,115 +18,6 @@ interface UserInfo {
 }
 
 export default function ProfilePage() {
-<<<<<<< HEAD
-  const [user, setUser] = useState<User | null>(null)
-  const router = useRouter();
-  const { logout } = useUser()
-  const token = Cookies.get('token'); // Lấy token từ cookie
-
-  useEffect(() => {
-    async function checkAuth() {
-      const res = await fetch('/api/auth/validate', {
-        method: 'POST', headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      if (!res.ok) {
-        router.push('/')
-      }
-    }
-
-    async function fetchProfile() {
-      try {
-        if (!token) {
-          console.error('No token found')
-          return
-        }
-
-        const response = await fetch(API.profile, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Failed to fetch profile')
-        }
-
-        const data = await response.json()
-        setUser(data)
-        console.log('Profile loaded', data)
-      } catch (error) {
-        console.error('Error loading profile:', error)
-      }
-    }
-
-    checkAuth()
-    fetchProfile()
-  }, [token]) // Thêm token vào dependency array
-
-  const handleLogout = async () => {
-    try {
-      const response = await fetch(`${API.users}/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          
-        },
-      });
-
-      if (response.ok) {
-        logout() // Gọi hàm logout từ context
-        window.location.href = '/'; // Redirect
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
-
-  return (
-    <main className="min-h-screen bg-muted py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Thông tin cá nhân</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {user ? (
-              <>
-                <Info label="Tên người dùng" value={user.Username} />
-                <Info label="Tên đầy đủ" value={user.Name} />
-                <Info label="Email" value={user.Email} />
-                <Info label="Vai trò" value={user.Role} />
-                <Info label="Loại hình" value={user.Type} />
-                <Info label="Tổ chức" value={user.OrganizationName} />
-                <Info label="Vị trí" value={user.Position} />
-                <Info label="Địa chỉ" value={user.Address} />
-                <Info label="Ngày thành lập" value={user.EstablishedDate} />
-                <Info label="Thành viên TV" value={user.MemberTV.toString()} />
-                <Info label="Thành viên KTV" value={user.MemberKTV.toString()} />
-                <Info label="Trạng thái" value={user.Status ? "Hoạt động" : "Ngừng"} />
-                <Info label="Bị khoá" value={user.IsLocked ? "Có" : "Không"} />
-                <Info label="Số khảo sát hoàn thành" value={`${user.SurveySuccess}/${user.SurveyTime}`} />
-              </>
-            ) : (
-              <Skeleton className="h-40 col-span-2" />
-            )}
-          </CardContent>
-        </Card>
-        <div>
-          <Button variant="outline" className="mt-4 w-full" onClick={handleLogout}>
-            Đăng xuất
-          </Button>
-        </div>
-        <div>
-          <Button variant="outline" className="mt-4 w-full" onClick={() => window.location.href = '/'}>
-            Trang chủ
-          </Button>
-        </div>
-=======
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +39,7 @@ export default function ProfilePage() {
       return;
     }
 
-    fetch(`http://localhost:3001/api/profile/${ID_user}`)
+    fetch(`http://localhost:4000/api/profile/${ID_user}`)
       .then(async (res) => {
         const data = await res.json();
 
@@ -213,7 +92,6 @@ export default function ProfilePage() {
         >
           Đăng xuất
         </button>
->>>>>>> 84d2b83e031f585e36b9ef5e352ba20f9fafa21f
       </div>
     </div>
   );

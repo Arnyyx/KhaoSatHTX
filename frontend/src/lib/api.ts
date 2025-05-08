@@ -11,14 +11,11 @@ export const API = {
     surveys: `${BASE_URL}/surveys`,
     questions: `${BASE_URL}/questions`,
     users: `${BASE_URL}/users`,
-<<<<<<< HEAD
     profile: `${BASE_URL}/profile`,
     // thêm endpoint khác nếu cần
-=======
     provinces: `${BASE_URL}/provinces`,
     districts: `${BASE_URL}/districts`,
     wards: `${BASE_URL}/wards`,
->>>>>>> 84d2b83e031f585e36b9ef5e352ba20f9fafa21f
 }
 
 export const surveyService = {

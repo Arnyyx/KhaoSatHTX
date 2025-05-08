@@ -43,7 +43,7 @@ export default function SurveyPage() {
 
     const fetchData = async () => {
       try {
-        const userRes = await fetch(`http://localhost:3001/api/profile/${ID_user}`);
+        const userRes = await fetch(`http://localhost:4000/api/profile/${ID_user}`);
         if (!userRes.ok) throw new Error("Không lấy được thông tin người dùng.");
         const user = await userRes.json();
 
@@ -64,8 +64,8 @@ export default function SurveyPage() {
         if (!surveyId) throw new Error("Không xác định được surveyId từ vai trò và loại người dùng.");
 
         const [surveyRes, questionRes] = await Promise.all([
-          fetch(`http://localhost:3001/api/survey/${surveyId}`),
-          fetch(`http://localhost:3001/api/question/${surveyId}`),
+          fetch(`http://localhost:4000/api/survey/${surveyId}`),
+          fetch(`http://localhost:4000/api/question/${surveyId}`),
         ]);
 
         if (!surveyRes.ok) throw new Error("Không thể lấy thông tin khảo sát.");
@@ -103,7 +103,7 @@ export default function SurveyPage() {
         answer: answerValueMap[answerText],
       }));
 
-      const res = await fetch("http://localhost:3001/api/result", {
+      const res = await fetch("http://localhost:4000/api/result", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

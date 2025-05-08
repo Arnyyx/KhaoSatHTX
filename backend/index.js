@@ -8,11 +8,14 @@ require('dotenv').config();
 const app = express();
 
 // Cấu hình CORS: chỉ cho phép frontend localhost:3000
-app.use(cors({
-  origin: 'http://localhost:3000', // chỉ cho phép từ localhost:3000
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Các method được phép
-  credentials: true // nếu bạn cần gửi cookie hoặc Authorization Header
-}));
+// app.use(cors({
+//   origin: 'http://localhost:3000', // chỉ cho phép từ localhost:3000
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Các method được phép
+//   credentials: true // nếu bạn cần gửi cookie hoặc Authorization Header
+// }));
+
+
+app.use(cors({}));
 
 // Middleware đọc JSON
 app.use(express.json());
@@ -31,9 +34,9 @@ app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 // Import router
 const loginRouter = require('./routes/login');
-app.use('/apis/login', loginRouter);
+app.use('/api/login', loginRouter);
 
-const surveyRoutes = require('./routes/surveyRouter');
+const surveyRoutes = require('./routes/surveysRouter');
 app.use('/api/survey', surveyRoutes);
 
 const userRoutes = require('./routes/userRoutes');

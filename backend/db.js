@@ -3,9 +3,9 @@ const sql = require('mssql');
 
 const config = {
   user: 'sa',
-  password: '123456',
-  server: 'BUCKOPAKOO\\SQLEXPRESS',
-  database: 'KSHTX',
+  password: '111',
+  server: 'MSI\\SQLEXPRESS',
+  database: 'KhaoSatHTX',
   options: {
     encrypt: false,
     trustServerCertificate: true,
@@ -15,11 +15,7 @@ const config = {
 const poolConnect = new sql.ConnectionPool(config)
   .connect()
   .then(pool => {
-<<<<<<< HEAD
-    console.log('✅ Database Connected');
-=======
     // console.log('✅ Connected to SQL Server');
->>>>>>> 4ff80e54b52771970ab60c45cd54aebffd4252d3
     return pool;
   })
   .catch(err => {

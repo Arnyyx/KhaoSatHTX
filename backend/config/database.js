@@ -15,6 +15,7 @@ const sequelize = new Sequelize(
             options: {
                 encrypt: false,
                 trustServerCertificate: true,
+                
             },
         },
     }
