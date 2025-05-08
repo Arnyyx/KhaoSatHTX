@@ -44,8 +44,8 @@ app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 const loginRouter = require('./routes/login');
 app.use('/apis/login', loginRouter);
 
-const surveyRoutes = require('./routes/surveyRouter');
-app.use('/api/survey', surveyRoutes);
+const surveyRoutes = require('./routes/surveysRouter');
+app.use('/api/surveys', surveyRoutes);
 
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);

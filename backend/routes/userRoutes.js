@@ -15,8 +15,6 @@ router.put("/:id", userController.updateUser);
 
 router.delete("/:id", userController.deleteUser);
 
-module.exports = router;const express = require('express');
-const router = express.Router();
 const { sql, poolConnect } = require('../db'); // <-- Dòng này thay thế dbConfig
 
 router.get('/profile/:id', async (req, res) => {
