@@ -8,52 +8,47 @@ const tableName = 'Wards';
 const ExcelJS = require('exceljs');
 require('dotenv').config();
 
-
-exports.getWards = async (req, res) => {
-  try {
-    const wards = await Ward.findAll();
-    res.json(wards);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Database error');
-  }
-};
-
 exports.getWardsByPage = async (req, res) => {
-  try {
-      const pageIndex = parseInt(req.query.page) || 1;
-      const pageSize = parseInt(req.query.page_size) || 10;
-      const search = req.query.search || '';
+    try {
+        const pageIndex = parseInt(req.query.page);
+        const pageSize = parseInt(req.query.page_size);
+        const search = req.query.search || '';
 
-      const whereClause = search
-          ? {
-                [Op.or]: [
-                    { Name: { [Op.like]: `%${search}%` } },
-                    {
-                        '$Province.Name$': {
-                            [Op.like]: `%${search}%`,
+        if (pageIndex && pageSize) {
+            const whereClause = search
+                ? {
+                    [Op.or]: [
+                        { Name: { [Op.like]: `%${search}%` } },
+                        {
+                            '$Province.Name$': {
+                                [Op.like]: `%${search}%`,
+                            },
                         },
-                    },
-                ],
-            }
-          : {};
+                    ],
+                }
+                : {};
 
-      const { count: total, rows: items } = await Ward.findAndCountAll({
-          where: whereClause,
-          include: {
-              association: 'Province',
-              attributes: ['Name'],
-          },
-          offset: (pageIndex - 1) * pageSize,
-          limit: pageSize,
-          order: [['Id', 'ASC']],
-      });
+            const { count: total, rows: items } = await Ward.findAndCountAll({
+                where: whereClause,
+                include: {
+                    association: 'Province',
+                    attributes: ['Name'],
+                },
+                offset: (pageIndex - 1) * pageSize,
+                limit: pageSize,
+                order: [['Id', 'ASC']],
+            });
 
-      res.json({ items, total });
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Database error');
-  }
+            res.json({ items, total });
+        }
+        else {
+            const wards = await Ward.findAll();
+            res.json(wards);
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Database error');
+    }
 };
 
 const Province = require("../models/Province");
@@ -70,30 +65,30 @@ exports.getParentList = async (req, res) => {
     }
 };
 exports.insertWard = async (req, res) => {
-  const { Name, ProvinceId } = req.body;
+    const { Name, ProvinceId } = req.body;
 
-  try {
-      // Kiểm tra trùng
-      const existing = await Ward.findOne({
-          where: {
-              Name: sequelize.where(
-                  sequelize.fn('LOWER', sequelize.fn('TRIM', sequelize.col('Name'))),
-                  sequelize.fn('LOWER', Name.trim())
-              ),
-              ProvinceId,
-          },
-      });
+    try {
+        // Kiểm tra trùng
+        const existing = await Ward.findOne({
+            where: {
+                Name: sequelize.where(
+                    sequelize.fn('LOWER', sequelize.fn('TRIM', sequelize.col('Name'))),
+                    sequelize.fn('LOWER', Name.trim())
+                ),
+                ProvinceId,
+            },
+        });
 
-      if (existing) {
-          return res.status(400).send('Tên phường/xã đã tồn tại.');
-      }
+        if (existing) {
+            return res.status(400).send('Tên phường/xã đã tồn tại.');
+        }
 
-      const ward = await Ward.create({ Name, ProvinceId });
-      res.json(ward);
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Database error');
-  }
+        const ward = await Ward.create({ Name, ProvinceId });
+        res.json(ward);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Database error');
+    }
 };
 exports.updateWard = async (req, res) => {
   const { Id, Name, ProvinceId } = req.body;

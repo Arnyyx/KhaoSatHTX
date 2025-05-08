@@ -10,32 +10,37 @@ const ExcelJS = require('exceljs');
 require('dotenv').config();
 
 exports.getProvincesByPage = async (req, res) => {
-  try {
-      const pageIndex = parseInt(req.query.page) || 1;
-      const search = req.query.search || '';
-      const pageSize = parseInt(req.query.page_size) || 10;
+    try {
+        const pageIndex = parseInt(req.query.page);
+        const search = req.query.search || '';
+        const pageSize = parseInt(req.query.page_size);
+        if (pageIndex && pageSize) {
+            const whereClause = search
+                ? {
+                    [Op.or]: [
+                        { Name: { [Op.like]: `%${search}%` } },
+                        { Region: { [Op.like]: `%${search}%` } },
+                    ],
+                }
+                : {};
 
-      const whereClause = search
-          ? {
-                [Op.or]: [
-                    { Name: { [Op.like]: `%${search}%` } },
-                    { Region: { [Op.like]: `%${search}%` } },
-                ],
-            }
-          : {};
+            const { count: total, rows: items } = await Province.findAndCountAll({
+                where: whereClause,
+                offset: (pageIndex - 1) * pageSize,
+                limit: pageSize,
+                order: [['Id', 'ASC']],
+            });
 
-      const { count: total, rows: items } = await Province.findAndCountAll({
-          where: whereClause,
-          offset: (pageIndex - 1) * pageSize,
-          limit: pageSize,
-          order: [['Id', 'ASC']],
-      });
-
-      res.json({ items, total });
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Database error');
-  }
+            res.json({ items, total });
+        }
+        else {
+            const provinces = await Province.findAll();
+            res.json(provinces);
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Database error');
+    }
 };
 exports.insertProvince = async (req, res) => {
   try {

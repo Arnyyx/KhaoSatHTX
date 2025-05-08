@@ -9,6 +9,7 @@ router.get("/province/", userController.getUsersByProvince);
 
 router.post("/", userController.createUser);
 router.post("/bulk", upload.single("file"), userController.bulkCreateUsers);
+router.post("/login", userController.userLogin)
 
 router.put("/:id", userController.updateUser);
 

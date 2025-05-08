@@ -12,6 +12,17 @@ app.use(cors());
 sequelize.sync({ force: false }).then(() => {
     console.log("Đồng bộ database thành công");
 });
+// app.use('/api/login', require('./routes/login'));
+// app.use('/api/profile', require('./routes/profile'));
+// app.use('/api', require('./routes/userRoutes_tmp'));
+
+// app.use('/api', require('./routes/survey_tmp'));
+app.use('/api/survey', require('./routes/survey_tmp'));
+app.use('/api/question', require('./routes/tmp_question'));
+app.use('/api/result', require('./routes/result'));
+
+
+
 
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);

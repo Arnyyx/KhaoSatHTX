@@ -17,9 +17,7 @@ const wardController = require("../controllers/wardController");
 //   }
 // });
 
-router.get('/', wardController.getWards);
 router.get('/', wardController.getWardsByPage);
-
 
 router.get('/parent_list', wardController.getParentList);
 

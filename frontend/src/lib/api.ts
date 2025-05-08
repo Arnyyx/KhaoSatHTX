@@ -12,6 +12,7 @@ export const API = {
     provinces: `${BASE_URL}/provinces`,
     districts: `${BASE_URL}/districts`,
     wards: `${BASE_URL}/wards`,
+    result: `${BASE_URL}/result`,
 }
 
 export const surveyService = {
