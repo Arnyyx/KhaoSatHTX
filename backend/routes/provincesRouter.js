@@ -17,7 +17,7 @@ const provincesController = require("../controllers/provinceController");
 //   }
 // });
 
-router.get('/', provincesController.getProvincesByPage);
+router.get('/', provincesController.getAllProvinces);
 router.post('/', provincesController.insertProvince);
 router.post('/sua', provincesController.updateProvince);
 router.delete('/', provincesController.deleteProvince);

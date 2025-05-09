@@ -15,7 +15,7 @@ sequelize.sync({ force: false }).then(() => {
 
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
-const wardsMld = require('./routes/wardsRounter.js');
+const wardsMld = require('./routes/wardsRouter.js');
 app.use('/api/wards', wardsMld);
 
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));

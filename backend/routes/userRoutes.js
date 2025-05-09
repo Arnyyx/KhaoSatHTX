@@ -5,10 +5,11 @@ const upload = require("../middleware/upload");
 
 router.get("/", userController.getAllUsers);
 router.get("/:id", userController.getUserById);
-router.get("/province/", userController.getUsersByProvince);
+router.get("/province/:provinceId", userController.getUsersByProvince);
 
 router.post("/", userController.createUser);
-router.post("/bulk", upload.single("file"), userController.bulkCreateUsers);
+router.post("/export", userController.exportUsers);
+router.post("/import", upload.single("file"), userController.importUsers);
 
 router.put("/:id", userController.updateUser);
 

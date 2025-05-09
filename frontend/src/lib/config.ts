@@ -1,5 +1,5 @@
 // lib/config.ts
 
 export const Config = {
-    pageSize: 50
+    limit: 10
 }

@@ -1,5 +1,6 @@
 // lib/api.ts
 import axios from "axios";
+import { Province, Ward } from "@/types/user";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 const initialPage = 1
@@ -71,8 +72,8 @@ export const surveyService = {
 };
 
 export const userService = {
-    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = "") => {
-        const response = await axios.get(`${BASE_URL}/users?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = "", sortColumn: string = "Username", sortDirection: string = "ASC") => {
+        const response = await axios.get(`${BASE_URL}/users?page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
         return response.data;
     },
 
@@ -103,20 +104,38 @@ export const userService = {
     deleteMultipleUsers: async (ids: number[]) => {
         const response = await axios.delete(`${BASE_URL}/users`, { data: { ids } });
         return response.data;
-    }
+    },
+    importUsers: async (file: File) => {
+        const response = await axios.post(`${BASE_URL}/users/import`, { file });
+        return response.data;
+    },
+    exportUsers: async (ids: number[]) => {
+        const response = await axios.post(
+            `${BASE_URL}/users/export`,
+            { ids: ids.join(",") },
+            {
+                responseType: "blob",
+            }
+        );
+        return response;
+    },
+
 };
 
 export const provinceService = {
-    getProvinces: async () => {
+    getProvinces: async (): Promise<{ total: number; items: Province[] }> => {
         const response = await axios.get(`${BASE_URL}/provinces`);
         return response.data;
-    }
+    },
 };
 
 export const wardService = {
-    getWards: async () => {
+    getWards: async (): Promise<{ total: number; items: Ward[] }> => {
         const response = await axios.get(`${BASE_URL}/wards`);
         return response.data;
-    }
+    },
+    getWardsByProvinceId: async (provinceId: number): Promise<{ total: number; items: Ward[] }> => {
+        const response = await axios.get(`${BASE_URL}/wards/province/${provinceId}`);
+        return response.data;
+    },
 };
-

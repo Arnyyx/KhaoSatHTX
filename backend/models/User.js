@@ -38,7 +38,7 @@ const User = sequelize.define(
         },
         Type: {
             type: DataTypes.STRING(10),
-            allowNull: false,
+            allowNull: true,
             validate: {
                 isIn: [["PNN", "NN"]],
             },
@@ -70,6 +70,9 @@ const User = sequelize.define(
         Member: {
             type: DataTypes.STRING(10),
             allowNull: true,
+            validate: {
+                isIn: [["KTV", "TV"]],
+            },
         },
         Status: {
             type: DataTypes.BOOLEAN,

@@ -240,7 +240,7 @@ export default function InfoTablePage() {
     // #endregion
     const fetchInfo = async (page: number) => {
         try {
-            const response = await fetch(`${API.wards}?page=${page}&page_size=${Config.pageSize}&search=${encodeURIComponent(searchText)}`)
+            const response = await fetch(`${API.wards}?page=${page}&limit=${Config.limit}&search=${encodeURIComponent(searchText)}`)
             const data = await response.json()
             setInfoList(data.items)
             setTotalPages(data.total)
@@ -397,7 +397,7 @@ export default function InfoTablePage() {
                     <label>{totalPages} bản ghi</label>
                     <Pagination
                         currentPage={currentPage}
-                        totalPages={Math.ceil(totalPages / Config.pageSize)}
+                        totalPages={Math.ceil(totalPages / Config.limit)}
                         onPageChange={(page) => setCurrentPage(page)}
                     />
                     <div className="overflow-x-auto space-y-2">

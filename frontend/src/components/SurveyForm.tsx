@@ -35,7 +35,7 @@ export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps)
         EndTime: initialData?.EndTime
             ? isValid(parseISO(initialData.EndTime))
                 ? parseISO(initialData.EndTime)
-                : addMinutes(new Date(), 60) // Mặc định EndTime sau StartTime 1 giờ
+                : addMinutes(new Date(), 60)
             : addMinutes(new Date(), 60),
         Status: initialData?.Status || true,
     });
