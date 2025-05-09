@@ -2,9 +2,7 @@ const User = require("../models/User");
 const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
-const sequelize = require("../config/database");
-const Province = require("../models/Province");
-const Ward = require("../models/Ward");
+const jwt = require("jsonwebtoken");
 
 exports.getAllUsers = async (req, res) => {
     try {
@@ -224,18 +222,34 @@ exports.userLogin = async (req, res) => {
       }
   
       res.cookie('ID_user', user.Id, {
-        httpOnly: true,
+        httpOnly: false,
         sameSite: 'Lax',
         secure: false,
         maxAge: 7 * 24 * 60 * 60 * 1000
       });
   
       res.cookie('role', user.Role.toLowerCase(), {
-        httpOnly: true,
+        httpOnly: false,
         sameSite: 'Lax',
         secure: false,
         maxAge: 7 * 24 * 60 * 60 * 1000
       });
+
+      const payload = {
+        id: user.Id,
+        username: user.Username,
+        role: user.Role,
+      };
+      
+      const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
+      
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'Lax',
+        maxAge: 3600 * 1000, // 1 giờ
+      });
+      
   
       return res.json({ success: true, user });
     } catch (err) {

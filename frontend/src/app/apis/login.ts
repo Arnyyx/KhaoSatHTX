@@ -3,11 +3,12 @@
 import { API } from "@/lib/api"
 export const login = async (username: string, password: string) => {
   try {
-    const res = await fetch('http://localhost:4000/api/login', {
+    const res = await fetch(`${API.users}/login`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',        
       },
+      credentials: 'include',
       body: JSON.stringify({ username, password })
     });
 
