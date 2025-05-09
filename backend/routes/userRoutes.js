@@ -10,6 +10,7 @@ router.get("/province/:provinceId", userController.getUsersByProvince);
 router.post("/", userController.createUser);
 router.post("/export", userController.exportUsers);
 router.post("/import", upload.single("file"), userController.importUsers);
+router.post("/login", userController.userLogin)
 
 router.put("/:id", userController.updateUser);
 

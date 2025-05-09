@@ -3,8 +3,6 @@ const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
-const { poolPromise } = require("../db");
-const tableName = 'Wards';
 const ExcelJS = require('exceljs');
 require('dotenv').config();
 
@@ -63,7 +61,7 @@ exports.getParentList = async (req, res) => {
 };
 
 exports.insertWard = async (req, res) => {
-  const { Name, ProvinceId } = req.body;
+    const { Name, ProvinceId } = req.body;
 
   try {
     // Kiểm tra trùng
