@@ -12,6 +12,7 @@ router.post("/", userController.createUser);
 router.post("/export", userController.exportUsers);
 router.post("/import", upload.single("file"), userController.importUsers);
 router.post("/login", userController.userLogin)
+router.post("/logout", userController.logout)
 
 router.put("/:id", userController.updateUser);
 

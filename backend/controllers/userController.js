@@ -10,6 +10,7 @@ const fs = require("fs");
 const userQueue = require("../queue/userQueue");
 const { mapExcelHeaders, checkRequiredHeaders, validateUserData } = require("../utils/userUtils");
 const { formatDateToDDMMYYYY, parseDateFromDDMMYYYY } = require("../utils/dateUtils");
+const jwt = require('jsonwebtoken');
 
 exports.getAllUsers = async (req, res) => {
     try {
@@ -173,61 +174,85 @@ exports.userLogin = async (req, res) => {
     const { username, password } = req.body;
 
     try {
-      const user = await User.findOne({
-        where: {
-            Username: username, 
-            Password: password 
-        } // Nếu chưa mã hóa mật khẩu
-      });
-  
-      if (!user) {
-        return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
-      }
-  
-      const isLocked = user.IsLocked === true || user.IsLocked === 1;
-      const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
-  
-      if (isLocked) {
-        const message = surveyStatus
-          ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
-          : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
-        return res.json({ success: false, message });
-      }
-  
-      res.cookie('ID_user', user.Id, {
-        httpOnly: false,
-        sameSite: 'Lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-  
-      res.cookie('role', user.Role.toLowerCase(), {
-        httpOnly: false,
-        sameSite: 'Lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
+        const user = await User.findOne({
+            where: {
+                Username: username,
+                Password: password
+            } // Nếu chưa mã hóa mật khẩu
+        });
 
-      const payload = {
-        id: user.Id,
-        username: user.Username,
-        role: user.Role,
-      };
-      
-      const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
-      
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'Lax',
-        maxAge: 3600 * 1000, // 1 giờ
-      });
-      
-  
-      return res.json({ success: true, user });
+        if (!user) {
+            return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
+        }
+
+        const isLocked = user.IsLocked === true || user.IsLocked === 1;
+        const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
+
+        if (isLocked) {
+            const message = surveyStatus
+                ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
+                : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
+            return res.json({ success: false, message });
+        }
+
+        res.cookie('ID_user', user.Id, {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.cookie('role', user.Role.toLowerCase(), {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        const payload = {
+            id: user.Id,
+            username: user.Username,
+            role: user.Role,
+        };
+
+        const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
+
+        res.cookie('token', token, {
+            httpOnly: false,
+            secure: false,
+            sameSite: 'Lax',
+            maxAge: 3600 * 1000,
+        });
+
+
+        return res.json({ success: true, user });
     } catch (err) {
-      console.error('Login error:', err);
-      return res.status(500).send('Server Error');
+        console.error('Login error:', err);
+        return res.status(500).send('Server Error');
+    }
+};
+
+exports.logout = (req, res) => {
+    try {
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'Lax',
+        });
+
+        res.clearCookie('ID_user', {
+            httpOnly: false,
+            sameSite: 'Lax',
+        });
+        res.clearCookie('role', {
+            httpOnly: false,
+            sameSite: 'Lax',
+        });
+
+        res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi khi đăng xuất', error: error.message });
     }
 };
 
@@ -235,61 +260,61 @@ exports.userLogin = async (req, res) => {
     const { username, password } = req.body;
 
     try {
-      const user = await User.findOne({
-        where: {
-            Username: username, 
-            Password: password 
-        } // Nếu chưa mã hóa mật khẩu
-      });
-  
-      if (!user) {
-        return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
-      }
-  
-      const isLocked = user.IsLocked === true || user.IsLocked === 1;
-      const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
-  
-      if (isLocked) {
-        const message = surveyStatus
-          ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
-          : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
-        return res.json({ success: false, message });
-      }
-  
-      res.cookie('ID_user', user.Id, {
-        httpOnly: false,
-        sameSite: 'Lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-  
-      res.cookie('role', user.Role.toLowerCase(), {
-        httpOnly: false,
-        sameSite: 'Lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
+        const user = await User.findOne({
+            where: {
+                Username: username,
+                Password: password
+            } // Nếu chưa mã hóa mật khẩu
+        });
 
-      const payload = {
-        id: user.Id,
-        username: user.Username,
-        role: user.Role,
-      };
-      
-      const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
-      
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'Lax',
-        maxAge: 3600 * 1000, // 1 giờ
-      });
-      
-  
-      return res.json({ success: true, user });
+        if (!user) {
+            return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
+        }
+
+        const isLocked = user.IsLocked === true || user.IsLocked === 1;
+        const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
+
+        if (isLocked) {
+            const message = surveyStatus
+                ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
+                : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
+            return res.json({ success: false, message });
+        }
+
+        res.cookie('ID_user', user.Id, {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.cookie('role', user.Role.toLowerCase(), {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        const payload = {
+            id: user.Id,
+            username: user.Username,
+            role: user.Role,
+        };
+
+        const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'Lax',
+            maxAge: 3600 * 1000, // 1 giờ
+        });
+
+
+        return res.json({ success: true, user });
     } catch (err) {
-      console.error('Login error:', err);
-      return res.status(500).send('Server Error');
+        console.error('Login error:', err);
+        return res.status(500).send('Server Error');
     }
 };
 

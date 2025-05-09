@@ -13,7 +13,6 @@ export const API = {
     questions: `${BASE_URL}/questions`,
     users: `${BASE_URL}/users`,
     profile: `${BASE_URL}/profile`,
-    // thêm endpoint khác nếu cần
     provinces: `${BASE_URL}/provinces`,
     districts: `${BASE_URL}/districts`,
     wards: `${BASE_URL}/wards`,

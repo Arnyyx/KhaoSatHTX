@@ -25,7 +25,7 @@ export default function LoginPage() {
   const handleLogin = async () => {
     const data = await login(username, password);
     console.log("🔁 DEBUG - Kết quả từ API login:", data);
-  
+
     if (data.success && data.user.Id && data.user.Role) {
       Cookies.set("ID_user", data.user.Id, { expires: 1 });
       Cookies.set("role", data.user.Role.toLowerCase(), { expires: 1 });
@@ -33,7 +33,7 @@ export default function LoginPage() {
     } else {
       alert(data.message || "Đăng nhập thất bại.");
     }
-  
+
   };
 
   return (

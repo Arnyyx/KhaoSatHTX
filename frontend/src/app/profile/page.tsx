@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/api"
 import Cookies from "js-cookie";
+import { logout } from "../apis/logout";
 
 interface UserInfo {
   Username: string;
@@ -23,12 +24,20 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleLogout = () => {
-    Cookies.remove("ID_user");
-    Cookies.remove("role");
-    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    router.push("/");
+  const handleLogout = async () => {
+    const data = await logout();
+    console.log("🔁 DEBUG - Kết quả từ API logout:", data);
+
+    if (data.success) {
+      Cookies.remove('ID_user');
+      Cookies.remove('role');
+
+      router.push('/login');
+    } else {
+      alert(data.message || 'Đăng xuất thất bại.');
+    }
   };
+
 
   useEffect(() => {
     const ID_user = Cookies.get("ID_user");
@@ -40,7 +49,7 @@ export default function ProfilePage() {
       return;
     }
 
-    fetch(`${API.users}/${ID_user}`,{ credentials: "include"})
+    fetch(`${API.users}/${ID_user}`, { credentials: "include" })
       .then(async (res) => {
         const data = await res.json();
         console.log("🔁 DEBUG - Kết quả:", data);
@@ -52,7 +61,6 @@ export default function ProfilePage() {
         if (!data || !data.user.Username) {
           throw new Error("Dữ liệu trả về không hợp lệ.");
         }
-        
 
         setUserInfo(data.user);
         setLoading(false);
