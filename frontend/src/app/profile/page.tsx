@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     Cookies.remove("ID_user");
     Cookies.remove("role");
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     router.push("/");
   };
 
@@ -39,7 +40,7 @@ export default function ProfilePage() {
       return;
     }
 
-    fetch(`${API.users}/${ID_user}`)
+    fetch(`${API.users}/${ID_user}`,{ credentials: "include"})
       .then(async (res) => {
         const data = await res.json();
         console.log("🔁 DEBUG - Kết quả:", data);

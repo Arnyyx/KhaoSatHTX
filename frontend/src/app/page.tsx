@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import NavButton from "@/components/NavButton"
 
 export default function HomePage() {
   return (
@@ -18,12 +19,7 @@ export default function HomePage() {
             <a href="#" className="hover:underline">Văn bản</a>
             <a href="#" className="hover:underline">Giới thiệu</a>
             <a href="#" className="hover:underline">Tin tức</a>
-            <Link href="/login">
-              <Button variant="secondary" size="sm">Đăng nhập</Button>
-            </Link>
-            <Link href="/admin">
-              <Button variant="secondary" size="sm">Admin</Button>
-            </Link>
+            <NavButton />
           </nav>
         </div>
       </header>

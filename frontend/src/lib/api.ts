@@ -2,6 +2,8 @@
 import axios from "axios";
 import { Province, Ward } from "@/types/user";
 
+import { profile } from "console"
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 const initialPage = 1
 const initialLimit = 10
@@ -10,6 +12,8 @@ export const API = {
     surveys: `${BASE_URL}/surveys`,
     questions: `${BASE_URL}/questions`,
     users: `${BASE_URL}/users`,
+    profile: `${BASE_URL}/profile`,
+    // thêm endpoint khác nếu cần
     provinces: `${BASE_URL}/provinces`,
     districts: `${BASE_URL}/districts`,
     wards: `${BASE_URL}/wards`,

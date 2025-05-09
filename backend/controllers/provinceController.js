@@ -4,6 +4,7 @@ const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
+const tableName = 'Provinces';
 const ExcelJS = require('exceljs');
 require('dotenv').config();
 

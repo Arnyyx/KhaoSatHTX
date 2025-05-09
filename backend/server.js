@@ -17,7 +17,7 @@ app.use('/api/question', require('./routes/question'));
 app.use('/api/result', require('./routes/result'));
 
 // Khởi động server
-const PORT = 3001;
+const PORT = 4000;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });

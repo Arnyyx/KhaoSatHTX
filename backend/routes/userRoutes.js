@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
 const upload = require("../middleware/upload");
+const { sql, poolConnect } = require('../db'); // <-- Dòng này thay thế dbConfig
 
 router.get("/", userController.getAllUsers);
 router.get("/:id", userController.getUserById);
