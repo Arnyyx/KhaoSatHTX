@@ -6,17 +6,6 @@ require('dotenv').config();
 const router = express.Router();
 const wardController = require("../controllers/wardController");
 
-// router.get('/', async (req, res) => {
-//   try {
-//     const pool = await poolPromise;
-//     const result = await pool.request().execute(`sp_${tableName}_GetAll`);
-//     res.json(result.recordset);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send('Database error');
-//   }
-// });
-
 router.get('/', wardController.getWardsByPage);
 
 router.get('/parent_list', wardController.getParentList);

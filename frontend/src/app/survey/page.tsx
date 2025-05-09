@@ -74,11 +74,11 @@ export default function SurveyPage() {
 
         const surveyData = await surveyRes.json();
         const questionData = await questionRes.json();
-        console.log('Question info',questionData.data);
+        console.log('Survey info',surveyData);
 
         if (!Array.isArray(questionData.data)) throw new Error("Dữ liệu câu hỏi không hợp lệ.");
 
-        setSurvey(surveyData);
+        setSurvey(surveyData.survey);
         setQuestions(questionData.data);
       } catch (err: any) {
         console.error("❌ Lỗi khi tải dữ liệu khảo sát:", err);
@@ -92,17 +92,17 @@ export default function SurveyPage() {
   }, []);
 
   const handleSubmit = async () => {
-    const ID_user = Cookies.get("ID_user");
-    if (!ID_user) {
+    const UserId = Cookies.get("ID_user");
+    if (!UserId) {
       alert("Không tìm thấy ID người dùng.");
       return;
     }
 
     try {
       const payload = Object.entries(answers).map(([ID_Q, answerText]) => ({
-        ID_user,
-        ID_Q: parseInt(ID_Q),
-        answer: answerValueMap[answerText],
+        UserId,
+        QuestionId: parseInt(ID_Q),
+        Answer: answerValueMap[answerText],
       }));
 
       const res = await fetch(`${API.result}`, {
