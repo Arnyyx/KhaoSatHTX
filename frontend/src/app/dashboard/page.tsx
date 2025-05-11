@@ -1,13 +1,22 @@
 "use client"
 
+import { use, useEffect, useState } from "react"
 import {
     Button,
 } from "@/components/ui/button"
-import { useState } from "react"
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell
 } from "recharts"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,11 +26,52 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { API } from "@/lib/api"
 
+type SurveyInfo = {
+    Id: number
+    Title: string
+    Description: string
+    StartTime: string
+    EndTime: string
+    finishedNum: number
+    totalNum: number
+}
+type ProvinceInfo = {
+    Id: number
+    Name: string
+    UsersNum: number
+}
 export default function DashboardPage() {
+    const [surveysInfoList, setSurveysInfoList] = useState<SurveyInfo[]>([])
+    const [provincesInfoList, setProvincesInfoList] = useState<ProvinceInfo[]>([])
+    const [provincesFilter, setProvincesFilter] = useState<ProvinceInfo[]>([])
     const totalHTX = 12
     const participatedHTX = 8
     const [surveyLocked, setSurveyLocked] = useState(false)
+    
+    const commboBoxChange = () => {
+        fetchInfo();
+    };
+    const fetchInfo = async () => {
+        try {
+            const surveyRes = await fetch(`${API.surveys}/progress`);
+            const surveyData = await surveyRes.json();
+            setSurveysInfoList(surveyData.survey)
+
+            const provinceRes = await fetch(`${API.provinces}/users_num`)
+            const provinceData = await provinceRes.json();
+            setProvincesInfoList(provinceData);
+            setProvincesFilter(provinceData);
+            console.log('Progress: ',surveyData)
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
+    useEffect(() => {
+        fetchInfo()
+        console.log('Sủvey', surveysInfoList)
+    }, [])
 
     const htxSurveyData = [
         { name: "HTX A", timestamp: "2025-04-23T08:30:00Z" },
@@ -44,7 +94,23 @@ export default function DashboardPage() {
     return (
         <main className="p-6 space-y-8 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-center">UI Components Showcase</h1>
-
+            <Card>
+                    <CardHeader>
+                        <CardTitle>Thống kê Cuộc khảo sát</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {surveysInfoList.map((item) => (
+                            <Card className="mb-2" key={item.Id}>
+                                <CardHeader><b>{item.Title}</b></CardHeader>
+                                <CardContent>
+                                    <div>Mô tả: {item.Description}</div>
+                                    <div>Bắt đầu: {item.StartTime} - Kết thúc: {item.EndTime}</div>
+                                    <div>Tiến độ: {item.finishedNum}/{item.totalNum}</div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </CardContent>
+            </Card>
             {/* Buttons */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold">Buttons</h2>
@@ -63,10 +129,36 @@ export default function DashboardPage() {
                 <h2 className="text-lg font-semibold mb-2">Card</h2>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Thống kê HTX</CardTitle>
+                        <CardTitle>Thống kê LM Hợp Tác Xã</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>Đã tham gia khảo sát: <strong>8</strong> / 12</p>
+                        <Select
+                            name="ProvinceId"
+                            onValueChange={commboBoxChange()}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={'Tất cả'}></SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[200px]">Liên minh Tỉnh</TableHead>
+                                    <TableHead className="w-[100px]">Số thành viên</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {provincesInfoList.map((item) => (
+                                    <TableRow key={item.Id}>
+                                        <TableCell>{item.Name}</TableCell>
+                                        <TableCell>{item.UsersNum}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             </section>

@@ -1,8 +1,37 @@
 const Survey = require("../models/Survey");
+const User = require("../models/User");
+const SurveyAccessRule = require("../models/SurveyAccessRule");
 const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
+
+exports.getSurveysProgress = async (req, res) => { 
+    try {
+        const survey = await sequelize.query(`
+            SELECT *, 
+            (select count(Users.Id) from Users, SurveyAccessRules
+            Where Users.Role = SurveyAccessRules.Role
+            AND Users.Type = SurveyAccessRules.Type
+            AND SurveyId = Surveys.Id
+            AND SurveyStatus = 1) as finishedNum,
+            (select count(Users.Id) from Users, SurveyAccessRules
+            Where Users.Role = SurveyAccessRules.Role
+            AND Users.Type = SurveyAccessRules.Type
+            AND SurveyId = Surveys.Id) as totalNum
+            from Surveys
+            Where Surveys.Status = 1
+          `, { type: sequelize.QueryTypes.SELECT });
+        if (survey) {
+            res.status(200).json({ message: "Lấy survey thành công", survey });
+        } else {
+            res.status(400).json({ message: "Không tìm thấy survey" });
+        }
+    } catch (error) {
+        console.error("Error in getSurveysProgress:", error);
+        res.status(400).json({ message: "Lỗi khi lấy survey", error: error.message });
+    }
+}
 
 exports.getSurveysById = async (req, res) => { 
     try {

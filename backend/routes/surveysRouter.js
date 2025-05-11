@@ -5,6 +5,7 @@ const upload = require("../middleware/upload");
 const Survey = require("../models/Survey");
 
 router.get("/", surveyController.getAllSurveys);
+router.get("/progress", surveyController.getSurveysProgress);
 router.get("/:id", surveyController.getSurveysById);
 
 router.post("/", surveyController.createSurvey);
