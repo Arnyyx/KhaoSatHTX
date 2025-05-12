@@ -705,3 +705,60 @@
   font-size: 14px;
   color: #444;
 }
+
+
+
+.container2 {
+  display: flex;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.main-content {
+  flex: 3;
+  padding-right: 30px;
+}
+
+.main-content h1 {
+  font-size: 28px;
+  color: #001c54;
+}
+
+.main-content p,
+.main-content li {
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.sidebar {
+  flex: 1;
+  padding-left: 20px;
+  border-left: 2px solid #ccc;
+  margin: 10px;
+}
+
+.sidebar-item {
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 4px double #444;
+}
+
+.sidebar-item h3 {
+  font-size: 16px;
+  margin: 0 0 5px;
+  color: #001c54;
+}
+
+.sidebar-item p {
+  font-size: 14px;
+  color: #333;
+}
+.comment-section a img {
+  width: 30px;
+  height: 30px;
+}
+.document a {
+  font-size: 14px;
+  color: black;
+  text-decoration: none;
+}
