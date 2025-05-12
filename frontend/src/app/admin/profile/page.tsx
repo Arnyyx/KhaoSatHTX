@@ -8,7 +8,7 @@ import { ProfileCard } from "@/components/profile/ProfileCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
-export default function ProfilePage() {
+export default function AdminProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -23,9 +23,9 @@ export default function ProfilePage() {
       return;
     }
 
-    // Redirect admin to admin profile
-    if (userRole === "admin") {
-      router.push("/admin/profile");
+    // Redirect non-admin users to regular profile
+    if (userRole !== "admin") {
+      router.push("/profile");
       return;
     }
 
@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
   return (
     <main className="container py-10">
-      <ProfileCard user={user} />
+      <ProfileCard user={user} isAdmin />
     </main>
   );
 }

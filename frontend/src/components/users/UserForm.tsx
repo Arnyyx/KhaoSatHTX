@@ -53,7 +53,6 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         IsLocked: undefined,
         SurveyStatus: undefined,
         SurveyTime: undefined,
-        ...(user ? { ...user, Password: '' } : {}), 
     });
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [wards, setWards] = useState<Ward[]>([]);
@@ -78,6 +77,15 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         }
     }, [formData.ProvinceId]);
 
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                ...user,
+                Password: '', // Clear password when editing
+            });
+        }
+    }, [user]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -95,7 +103,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         }
 
         if (missingFields.length > 0) {
-            toast.error(`Please fill in required fields: ${missingFields.join(', ')}`);
+            toast.error(`Please fill in required fields: ${missingFields.join(', ')} `);
             return;
         }
 
@@ -179,135 +187,139 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="OrganizationName" className="text-right">Organization Name {isNonAdmin ? '*' : ''}</Label>
-                            <Input
-                                id="OrganizationName"
-                                value={formData.OrganizationName || ''}
-                                onChange={(e) => setFormData({ ...formData, OrganizationName: e.target.value })}
-                                className="col-span-3"
-                                required={isNonAdmin}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="Name" className="text-right">Name {isNonAdmin ? '*' : ''}</Label>
-                            <Input
-                                id="Name"
-                                value={formData.Name || ''}
-                                onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
-                                className="col-span-3"
-                                required={isNonAdmin}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="Type" className="text-right">Type {isNonAdmin ? '*' : ''}</Label>
-                            <Select
-                                value={formData.Type}
-                                onValueChange={(value) => setFormData({ ...formData, Type: value as any })}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="PNN">PNN</SelectItem>
-                                    <SelectItem value="NN">NN</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="ProvinceId" className="text-right">Province {isNonAdmin ? '*' : ''}</Label>
-                            <Select
-                                value={formData.ProvinceId ? formData.ProvinceId.toString() : undefined}
-                                onValueChange={(value) => setFormData({ ...formData, ProvinceId: parseInt(value), WardId: undefined })}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select province" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {provinces.map((province) => (
-                                        <SelectItem key={province.Id} value={province.Id.toString()}>
-                                            {province.Name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="WardId" className="text-right">Ward {isNonAdmin ? '*' : ''}</Label>
-                            <Select
-                                value={formData.WardId ? formData.WardId.toString() : undefined}
-                                onValueChange={(value) => setFormData({ ...formData, WardId: parseInt(value) })}
-                                disabled={!formData.ProvinceId}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select ward" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {wards.map((ward) => (
-                                        <SelectItem key={ward.Id} value={ward.Id.toString()}>
-                                            {ward.Name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="Address" className="text-right">Address {isNonAdmin ? '*' : ''}</Label>
-                            <Input
-                                id="Address"
-                                value={formData.Address || ''}
-                                onChange={(e) => setFormData({ ...formData, Address: e.target.value })}
-                                className="col-span-3"
-                                required={isNonAdmin}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="Position" className="text-right">Position {isNonAdmin ? '*' : ''}</Label>
-                            <Input
-                                id="Position"
-                                value={formData.Position || ''}
-                                onChange={(e) => setFormData({ ...formData, Position: e.target.value })}
-                                className="col-span-3"
-                                required={isNonAdmin}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="NumberCount" className="text-right">Number Count {isNonAdmin ? '*' : ''}</Label>
-                            <Input
-                                id="NumberCount"
-                                type="number"
-                                value={formData.NumberCount !== undefined ? formData.NumberCount : ''}
-                                onChange={(e) => setFormData({ ...formData, NumberCount: parseInt(e.target.value) || undefined })}
-                                className="col-span-3"
-                                required={isNonAdmin}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="EstablishedDate" className="text-right">Established Date {isNonAdmin ? '*' : ''}</Label>
-                            <Input
-                                id="EstablishedDate"
-                                type="date"
-                                value={formData.EstablishedDate || ''}
-                                onChange={(e) => setFormData({ ...formData, EstablishedDate: e.target.value })}
-                                className="col-span-3"
-                                required={isNonAdmin}
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="Member" className="text-right">Member {isNonAdmin ? '*' : ''}</Label>
-                            <Select
-                                value={formData.Member}
-                                onValueChange={(value) => setFormData({ ...formData, Member: value as any })}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select member" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="KTV">KTV</SelectItem>
-                                    <SelectItem value="TV">TV</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {isNonAdmin && (
+                            <>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="OrganizationName" className="text-right">Organization Name *</Label>
+                                    <Input
+                                        id="OrganizationName"
+                                        value={formData.OrganizationName || ''}
+                                        onChange={(e) => setFormData({ ...formData, OrganizationName: e.target.value })}
+                                        className="col-span-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="Name" className="text-right">Name *</Label>
+                                    <Input
+                                        id="Name"
+                                        value={formData.Name || ''}
+                                        onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
+                                        className="col-span-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="Type" className="text-right">Type *</Label>
+                                    <Select
+                                        value={formData.Type}
+                                        onValueChange={(value) => setFormData({ ...formData, Type: value as any })}
+                                    >
+                                        <SelectTrigger className="col-span-3">
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="PNN">PNN</SelectItem>
+                                            <SelectItem value="NN">NN</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="ProvinceId" className="text-right">Province *</Label>
+                                    <Select
+                                        value={formData.ProvinceId ? formData.ProvinceId.toString() : undefined}
+                                        onValueChange={(value) => setFormData({ ...formData, ProvinceId: parseInt(value), WardId: undefined })}
+                                    >
+                                        <SelectTrigger className="col-span-3">
+                                            <SelectValue placeholder="Select province" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {provinces.map((province) => (
+                                                <SelectItem key={province.Id} value={province.Id.toString()}>
+                                                    {province.Name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="WardId" className="text-right">Ward *</Label>
+                                    <Select
+                                        value={formData.WardId ? formData.WardId.toString() : undefined}
+                                        onValueChange={(value) => setFormData({ ...formData, WardId: parseInt(value) })}
+                                        disabled={!formData.ProvinceId}
+                                    >
+                                        <SelectTrigger className="col-span-3">
+                                            <SelectValue placeholder="Select ward" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {wards.map((ward) => (
+                                                <SelectItem key={ward.Id} value={ward.Id.toString()}>
+                                                    {ward.Name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="Address" className="text-right">Address *</Label>
+                                    <Input
+                                        id="Address"
+                                        value={formData.Address || ''}
+                                        onChange={(e) => setFormData({ ...formData, Address: e.target.value })}
+                                        className="col-span-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="Position" className="text-right">Position *</Label>
+                                    <Input
+                                        id="Position"
+                                        value={formData.Position || ''}
+                                        onChange={(e) => setFormData({ ...formData, Position: e.target.value })}
+                                        className="col-span-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="NumberCount" className="text-right">Number Count *</Label>
+                                    <Input
+                                        id="NumberCount"
+                                        type="number"
+                                        value={formData.NumberCount !== undefined ? formData.NumberCount : ''}
+                                        onChange={(e) => setFormData({ ...formData, NumberCount: parseInt(e.target.value) || undefined })}
+                                        className="col-span-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="EstablishedDate" className="text-right">Established Date *</Label>
+                                    <Input
+                                        id="EstablishedDate"
+                                        type="date"
+                                        value={formData.EstablishedDate || ''}
+                                        onChange={(e) => setFormData({ ...formData, EstablishedDate: e.target.value })}
+                                        className="col-span-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="Member" className="text-right">Member *</Label>
+                                    <Select
+                                        value={formData.Member}
+                                        onValueChange={(value) => setFormData({ ...formData, Member: value as any })}
+                                    >
+                                        <SelectTrigger className="col-span-3">
+                                            <SelectValue placeholder="Select member" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="KTV">KTV</SelectItem>
+                                            <SelectItem value="TV">TV</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -178,7 +178,7 @@ exports.userLogin = async (req, res) => {
             where: {
                 Username: username,
                 Password: password
-            } // Nếu chưa mã hóa mật khẩu
+            }
         });
 
         if (!user) {

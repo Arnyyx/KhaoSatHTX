@@ -51,16 +51,7 @@ export default function SurveyPage() {
         const role = profile.user.Role?.toLowerCase();
         const type = profile.user.Type?.toLowerCase();
 
-        const surveyId =
-          role === "htx"
-            ? type === "nn"
-              ? 1
-              : type === "pnn"
-              ? 3
-              : undefined
-            : role === "qtd"
-            ? 2
-            : undefined;
+        const surveyId = role === "htx" ? type === "nn" ? 1 : type === "pnn" ? 3 : undefined : role === "qtd" ? 2 : undefined;
 
         if (!surveyId) throw new Error("Không xác định được vai trò người dùng.");
 
@@ -74,7 +65,7 @@ export default function SurveyPage() {
 
         const surveyData = await surveyRes.json();
         const questionData = await questionRes.json();
-        console.log('Survey info',surveyData);
+        console.log('Survey info', surveyData);
 
         if (!Array.isArray(questionData.data)) throw new Error("Dữ liệu câu hỏi không hợp lệ.");
 

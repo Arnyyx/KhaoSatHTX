@@ -4,7 +4,7 @@ import { Province, Ward } from "@/types/user";
 
 import { profile } from "console"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 const initialPage = 1
 const initialLimit = 10
 

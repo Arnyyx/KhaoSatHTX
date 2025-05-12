@@ -1,30 +1,71 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export const config = {
-  matcher: [],
+// Define protected routes and their allowed roles
+const protectedRoutes = {
+  '/admin': ['admin'],
+  '/provinces': ['admin'],
+  '/wards': ['admin'],
+  '/union': ['LMHTX'],
+  '/survey': ['HTX', 'QTD'],
+  '/profile': ['HTX', 'QTD', 'LMHTX', 'admin'],
 }
 
-export async function middleware(request: NextRequest) {
+// Define default routes for each role
+const defaultRoutes = {
+  'admin': '/admin',
+  'LMHTX': '/union',
+  'HTX': '/profile',
+  'QTD': '/profile',
+}
+
+export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
-  console.log('Token:', token) // Kiểm tra token trong middleware
+  const userRole = request.cookies.get('userRole')?.value;
+  const path = request.nextUrl.pathname;
 
-  if (!token) {
-    return NextResponse.redirect(new URL('/', request.url))
+  // Handle login page
+  if (path === '/login') {
+    if (!token || !userRole) {
+      return NextResponse.next();
+    }
+    // If authenticated, redirect to role's default page
+    const defaultRoute = defaultRoutes[userRole as keyof typeof defaultRoutes];
+    if (defaultRoute) {
+      return NextResponse.redirect(new URL(defaultRoute, request.url));
+    }
   }
 
-  // Gửi request validate về API route (serverless function chạy trong Node env)
-  const res = await fetch(`${request.nextUrl.origin}/api/auth/validate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  })
-
-  if (res.status !== 200) {
-    return NextResponse.redirect(new URL('/', request.url))
+  // Check authentication for protected routes
+  if (!token || !userRole) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  return NextResponse.next()
+  // Check role-based access for protected routes
+  for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
+    if (path.startsWith(route)) {
+      if (!allowedRoles.includes(userRole)) {
+        // Redirect to role's default page
+        const defaultRoute = defaultRoutes[userRole as keyof typeof defaultRoutes];
+        if (defaultRoute) {
+          return NextResponse.redirect(new URL(defaultRoute, request.url));
+        }
+      }
+    }
+  }
+
+  return NextResponse.next();
+}
+
+// Configure which routes to run middleware on
+export const config = {
+  matcher: [
+    '/admin/:path*',
+    '/provinces/:path*',
+    '/wards/:path*',
+    '/union/:path*',
+    '/survey/:path*',
+    '/profile/:path*',
+    '/login',
+  ],
 }

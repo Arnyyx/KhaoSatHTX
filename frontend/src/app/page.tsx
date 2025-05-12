@@ -8,22 +8,6 @@ import NavButton from "@/components/NavButton"
 export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-primary text-white py-4 shadow">
-        <div className="container mx-auto flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo" className="h-10 w-10 object-contain" />
-            <h1 className="text-xl font-semibold">Liên minh Hợp tác xã</h1>
-          </div>
-          <nav className="flex items-center gap-6">
-            <a href="#" className="hover:underline">Văn bản</a>
-            <a href="#" className="hover:underline">Giới thiệu</a>
-            <a href="#" className="hover:underline">Tin tức</a>
-            <NavButton />
-          </nav>
-        </div>
-      </header>
-
       {/* Content */}
       <div className="flex-1 container mx-auto px-4 py-8 space-y-8">
         <section>
@@ -83,21 +67,6 @@ export default function HomePage() {
           </div>
         </section>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-muted text-sm py-6 border-t">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between gap-4">
-          <div>
-            <strong>Liên minh HTX Việt Nam</strong><br />
-            123 Đường Lý Thái Tổ, Q.1, TP.HCM<br />
-            Email: lienminhhtx@example.com<br />
-            Điện thoại: 028-1234-5678
-          </div>
-          <div className="text-muted-foreground">
-            © {new Date().getFullYear()}
-          </div>
-        </div>
-      </footer>
     </main>
   )
 }

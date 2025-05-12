@@ -134,6 +134,7 @@ export function UserTable() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                            console.log('User to edit:', row.original);
                             setEditingUser(row.original);
                             setIsEditOpen(true);
                         }}
