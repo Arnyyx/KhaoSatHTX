@@ -7,7 +7,7 @@ export default function AdminPage() {
     const router = useRouter();
 
     useEffect(() => {
-        router.push("/admin/users");
+        router.push("/admin/profile");
     }, [router]);
 
     return null;

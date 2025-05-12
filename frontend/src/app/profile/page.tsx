@@ -1,82 +1,66 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-
-interface User {
-  Id: number
-  Username: string
-  OrganizationName: string
-  Name: string
-  Role: string
-  Email: string
-  Type: string
-  ProvinceId: number
-  DistrictId: number
-  WardId: number
-  Address: string
-  Position: string
-  NumberCount: number
-  EstablishedDate: string
-  MemberTV: number
-  MemberKTV: number
-  Status: boolean
-  IsLocked: boolean
-  SurveySuccess: number
-  SurveyTime: number
-}
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { API } from "@/lib/api";
+import Cookies from "js-cookie";
+import { ProfileCard } from "@/components/profile/ProfileCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    fetch("http://localhost:3001/users/1")
-      .then(res => res.json())
-      .then(data => setUser(data))
-      .catch(console.error)
-  }, [])
+    const userId = Cookies.get("userId");
+    const userRole = Cookies.get("userRole");
 
-  return (
-    <main className="min-h-screen bg-muted py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Thông tin cá nhân</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {user ? (
-              <>
-                <Info label="Tên người dùng" value={user.Username} />
-                <Info label="Tên đầy đủ" value={user.Name} />
-                <Info label="Email" value={user.Email} />
-                <Info label="Vai trò" value={user.Role} />
-                <Info label="Loại hình" value={user.Type} />
-                <Info label="Tổ chức" value={user.OrganizationName} />
-                <Info label="Vị trí" value={user.Position} />
-                <Info label="Địa chỉ" value={user.Address} />
-                <Info label="Ngày thành lập" value={user.EstablishedDate} />
-                <Info label="Thành viên TV" value={user.MemberTV.toString()} />
-                <Info label="Thành viên KTV" value={user.MemberKTV.toString()} />
-                <Info label="Trạng thái" value={user.Status ? "Hoạt động" : "Ngừng"} />
-                <Info label="Bị khoá" value={user.IsLocked ? "Có" : "Không"} />
-                <Info label="Số khảo sát hoàn thành" value={`${user.SurveySuccess}/${user.SurveyTime}`} />
-              </>
-            ) : (
-              <Skeleton className="h-40 col-span-2" />
-            )}
-          </CardContent>
-        </Card>
+    if (!userId || !userRole) {
+      toast.error("Vui lòng đăng nhập để xem thông tin");
+      router.push("/login");
+      return;
+    }
+
+    // Redirect admin to admin profile
+    if (userRole === "admin") {
+      router.push("/admin/profile");
+      return;
+    }
+
+    fetch(`${API.users}/${userId}`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Không thể lấy thông tin người dùng");
+        }
+        const data = await res.json();
+        setUser(data.user);
+      })
+      .catch((error) => {
+        toast.error("Có lỗi xảy ra khi lấy thông tin người dùng");
+        console.error(error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="container py-10">
+        <Skeleton className="w-full h-[600px]" />
       </div>
-    </main>
-  )
-}
+    );
+  }
 
-function Info({ label, value }: { label: string; value: string }) {
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div>
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="font-medium">{value}</div>
-    </div>
-  )
+    <main className="container py-10">
+      <ProfileCard user={user} />
+    </main>
+  );
 }

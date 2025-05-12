@@ -3,7 +3,7 @@ const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
-const { poolPromise } = require("../db");
+
 
 exports.getAllQuestions = async (req, res) => {
     try {

@@ -47,9 +47,13 @@ export function SurveyTable() {
 
     const fetchSurveys = async (searchQuery: string = "") => {
         try {
-            const data = await surveyService.getSurveys(page, 10, searchQuery);
-            setSurveys(data.data);
-            setPagination(data.pagination);
+            const data = await surveyService.getSurveysByPage(page, 10, searchQuery);
+            setSurveys(data.rows);
+            setPagination({
+                currentPage: page,
+                totalPages: Math.ceil(data.count / 10),
+                totalItems: data.count,
+            });
         } catch (error: any) {
             toast.error("Lỗi khi lấy danh sách khảo sát", {
                 description: error.message,
