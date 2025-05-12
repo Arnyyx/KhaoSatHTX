@@ -1,6 +1,7 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
+import { useMemo } from "react";
 import {
     Button,
 } from "@/components/ui/button"
@@ -18,15 +19,8 @@ import {
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { API } from "@/lib/api"
+import { all } from "axios";
 
 type SurveyInfo = {
     Id: number
@@ -42,17 +36,122 @@ type ProvinceInfo = {
     Name: string
     UsersNum: number
 }
+interface User {
+    Id: number;
+    Username: string;
+    Name: string | null;
+    Email: string;
+    Role: "LMHTX" | "QTD" | "HTX" | "admin";
+    Status: boolean | null;
+    IsLocked: boolean | null;
+    OrganizationName?: string | null;
+    Type?: "PNN" | "NN";
+    ProvinceId?: number | null;
+    WardId?: number | null;
+    Address?: string | null;
+    Position?: string | null;
+    NumberCount?: number | null;
+    EstablishedDate?: string | null;
+    Member?: string | null;
+    SurveyStatus?: boolean | null;
+    SurveyTime?: number | null;
+    Province?: { Name: string } | null;
+    Ward?: { Name: string } | null;
+}
+type ValuePair = {
+    Id: number
+    Name: string
+}
+type WardInfo = {
+  Id: number
+  ProvinceId: number
+  Name: string
+}
 export default function DashboardPage() {
+    const [filters, setFilters] = useState<{
+        ProvinceId?: number;
+        WardId?: number;
+        Role?: User["Role"];
+        Type?: User["Type"];
+        SurveyStatus?: boolean;
+    }>({});
+    const [showProvincesAll, setShowProvincesAll] = useState(false);
+    const [showUsersAll, setShowUsersAll] = useState(false);
+
     const [surveysInfoList, setSurveysInfoList] = useState<SurveyInfo[]>([])
     const [provincesInfoList, setProvincesInfoList] = useState<ProvinceInfo[]>([])
     const [provincesFilter, setProvincesFilter] = useState<ProvinceInfo[]>([])
-    const totalHTX = 12
-    const participatedHTX = 8
-    const [surveyLocked, setSurveyLocked] = useState(false)
+    const [valuePairList, setValuePairList] = useState<ValuePair[]>([])
+    const [valuePairList0, setValuePairList0] = useState<ValuePair[]>([])
+    const [allDistricts, setAllWard] = useState<WardInfo[]>([]);
+    const [usersList, setUsersList] = useState<User[]>([])
     
-    const commboBoxChange = () => {
-        fetchInfo();
+    const visibleProvinces = showProvincesAll ? provincesFilter : provincesFilter.slice(0, 10);
+    const visibleUsers = showUsersAll ? usersList : usersList.slice(0, 10); 
+    const [allUsersList, setAllUsersList] = useState<User[]>([])
+    // const [participatedHTX, setParticipatedHTX] = useState(0)
+    const [totalHTX, setTotalHTX] = useState(0)
+    
+    const commboBoxChange = (value: string) => {
+        if(value === 'Tất cả') {
+            setProvincesFilter(provincesInfoList)
+        } else if(value === 'Đã có thành viên') {
+            setProvincesFilter(provincesInfoList.filter(item => item.UsersNum > 0))
+        } else if(value === 'Chưa có thành viên') {
+            setProvincesFilter(provincesInfoList.filter(item => item.UsersNum === 0))
+        }
     };
+    const renderCustomLabel = ({ name , percent }: { name: string; percent: number }) => {
+        return `${name}: ${(percent * 100).toFixed(0)}%`;
+    };
+    const filterCommboBoxChange = (value: string, name: string) => {
+        const newFilters = { ...filters };
+
+        if (name === "ProvinceId") {
+            const filteredDistricts = allDistricts.filter(d => d.ProvinceId === Number(value));
+            setValuePairList(filteredDistricts); // cập nhật danh sách quận huyện
+            newFilters.ProvinceId = value === "all" ? undefined : parseInt(value);
+        } else if (name === "WardId") {
+            newFilters.WardId = value === "all" ? undefined : parseInt(value);
+        } else if (name === "Role") {
+            if (value === "all") {newFilters.Role = undefined; newFilters.Type = undefined;}
+            else if (value === "HTX_NN") {newFilters.Role = "HTX"; newFilters.Type = "NN";}
+            else if (value === "HTX_PNN") {newFilters.Role = "HTX"; newFilters.Type = "PNN";}
+            else if (value === "QTD") {newFilters.Role = "QTD"; newFilters.Type = undefined;}
+            else if (value === "LMHTX") {newFilters.Role = "LMHTX"; newFilters.Type = undefined;}
+            else if (value === "admin") {newFilters.Role = "admin"; newFilters.Type = undefined;}
+        } else if (name === "SurveyStatus") {
+            if (value === "all") newFilters.SurveyStatus = undefined;
+            else newFilters.SurveyStatus = value === "true";
+        }
+
+        setFilters(newFilters);
+        filterUsers(newFilters);
+    };
+
+    const filterUsers = (currentFilters: typeof filters) => {
+        const filtered = allUsersList.filter((user) => {
+            return (
+                (currentFilters.ProvinceId === undefined || user.ProvinceId === currentFilters.ProvinceId) &&
+                (currentFilters.WardId === undefined || user.WardId === currentFilters.WardId) &&
+                (currentFilters.Role === undefined || user.Role === currentFilters.Role) &&
+                (currentFilters.Type === undefined || user.Type === currentFilters.Type) &&
+                (currentFilters.SurveyStatus === undefined || user.SurveyStatus === currentFilters.SurveyStatus)
+            );
+        });
+        setUsersList(filtered);
+        console.log("Filtered Users:", filtered);
+    };
+    const pieData = useMemo(() => {
+        const participatedCount = usersList.filter((user: User) => user.SurveyStatus).length;
+        const totalCount = usersList.length;
+        setTotalHTX(totalCount);
+        return [
+            { name: "Đã tham gia", value: participatedCount },
+            { name: "Chưa tham gia", value: totalCount - participatedCount },
+        ];
+    }, [usersList]);
+
     const fetchInfo = async () => {
         try {
             const surveyRes = await fetch(`${API.surveys}/progress`);
@@ -63,14 +162,29 @@ export default function DashboardPage() {
             const provinceData = await provinceRes.json();
             setProvincesInfoList(provinceData);
             setProvincesFilter(provinceData);
-            console.log('Progress: ',surveyData)
+            
+            const userRes = await fetch(`${API.users}`)
+            const userData = await userRes.json();
+            setUsersList(userData);
+            setAllUsersList(userData);
+            // const participatedCount = userData.filter((user: User) => user.SurveyStatus).length;
+            // const totalCount = userData.length;
+            // setParticipatedHTX(participatedCount);
+            // setTotalHTX(totalCount);
+
+            const res1 = await fetch(`${API.wards}/parent_list`)
+            const data1 = await res1.json()
+            setValuePairList0(data1)
+
+            const res2 = await fetch(`${API.wards}`)
+            const data2 = await res2.json()
+            setAllWard(data2)
         } catch (error) {
             console.error("Error fetching data:", error);
         }
     };
     useEffect(() => {
         fetchInfo()
-        console.log('Sủvey', surveysInfoList)
     }, [])
 
     const htxSurveyData = [
@@ -93,7 +207,7 @@ export default function DashboardPage() {
     )
     return (
         <main className="p-6 space-y-8 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-center">UI Components Showcase</h1>
+            <h1 className="text-2xl font-bold text-center">DASHBOARD</h1>
             <Card>
                     <CardHeader>
                         <CardTitle>Thống kê Cuộc khảo sát</CardTitle>
@@ -111,36 +225,24 @@ export default function DashboardPage() {
                         ))}
                     </CardContent>
             </Card>
-            {/* Buttons */}
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">Buttons</h2>
-                <div className="flex gap-2 flex-wrap">
-                    <Button>Default</Button>
-                    <Button variant="destructive">Destructive</Button>
-                    <Button variant="outline">Outline</Button>
-                    <Button variant="secondary">Secondary</Button>
-                    <Button variant="ghost">Ghost</Button>
-                    <Button disabled>Disabled</Button>
-                </div>
-            </section>
-
             {/* Card */}
             <section>
-                <h2 className="text-lg font-semibold mb-2">Card</h2>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Thống kê LM Hợp Tác Xã</CardTitle>
+                        <CardTitle>Thống kê thành viên LM Hợp Tác Xã</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Select
                             name="ProvinceId"
-                            onValueChange={commboBoxChange()}
+                            onValueChange={(value) => commboBoxChange(value)}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
+                                <SelectValue placeholder="Tất cả"/>
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value={'Tất cả'}></SelectItem>
+                                <SelectItem value={'Tất cả'}>Tất cả</SelectItem>
+                                <SelectItem value={'Đã có thành viên'}>Đã có danh sách thành viên</SelectItem>
+                                <SelectItem value={'Chưa có thành viên'}>Chưa có danh sách thành viên</SelectItem>
                             </SelectContent>
                         </Select>
                         <Table>
@@ -151,7 +253,7 @@ export default function DashboardPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {provincesInfoList.map((item) => (
+                                {visibleProvinces.map((item) => (
                                     <TableRow key={item.Id}>
                                         <TableCell>{item.Name}</TableCell>
                                         <TableCell>{item.UsersNum}</TableCell>
@@ -159,90 +261,98 @@ export default function DashboardPage() {
                                 ))}
                             </TableBody>
                         </Table>
+                        {provincesFilter.length > 10 && (
+                            <div className="mt-4 text-center">
+                                <button
+                                    className="text-blue-600 hover:underline"
+                                    onClick={() => setShowProvincesAll(!showProvincesAll)}
+                                >
+                                    {showProvincesAll ? "Thu gọn" : "Xem thêm"}
+                                </button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </section>
-
-            {/* Input + Switch */}
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">Input & Switch</h2>
-                <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" placeholder="you@example.com" />
-                </div>
-                <div className="flex items-center gap-4">
-                    <Label htmlFor="toggle">Khảo sát</Label>
-                    <Switch id="toggle" />
-                </div>
-            </section>
-
-            {/* Tabs */}
-            <section>
-                <h2 className="text-lg font-semibold mb-2">Tabs</h2>
-                <Tabs defaultValue="htx">
-                    <TabsList>
-                        <TabsTrigger value="htx">HTX</TabsTrigger>
-                        <TabsTrigger value="union">Liên minh</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="htx">Danh sách HTX</TabsContent>
-                    <TabsContent value="union">Thông tin liên minh</TabsContent>
-                </Tabs>
-            </section>
-
-            {/* Badge + Alert */}
-            <section className="space-y-4">
-                <h2 className="text-lg font-semibold">Badge & Alert</h2>
-                <div className="flex gap-2">
-                    <Badge>Đã tham gia</Badge>
-                    <Badge variant="destructive">Chưa tham gia</Badge>
-                </div>
-                <Alert>
-                    <AlertTitle>Cảnh báo</AlertTitle>
-                    <AlertDescription>Số lượng HTX chưa tham gia còn nhiều.</AlertDescription>
-                </Alert>
-            </section>
-
-            {/* Avatar */}
-            <section>
-                <h2 className="text-lg font-semibold mb-2">Avatar</h2>
-                <Avatar>
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback>HTX</AvatarFallback>
-                </Avatar>
-            </section>
-
-            {/* Dialog */}
-            <section>
-                <h2 className="text-lg font-semibold mb-2">Dialog</h2>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button>Hiện hộp thoại</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Thông báo</DialogTitle>
-                        </DialogHeader>
-                        <p>Đây là nội dung dialog, dùng để xác nhận hoặc hiển thị thông tin.</p>
-                    </DialogContent>
-                </Dialog>
-            </section>
+            
             <Card>
                 <CardContent className="p-6">
                     <h2 className="text-lg font-semibold mb-4">Tỷ lệ HTX tham gia khảo sát</h2>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Lọc</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-row gap-4">
+                            <Select
+                                name="ProvinceId"
+                                onValueChange={(value) => filterCommboBoxChange(value, "ProvinceId")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả</SelectItem>
+                                    {valuePairList0.map((item) => (
+                                        <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                name="WardId"
+                                onValueChange={(value) => filterCommboBoxChange(value, "WardId")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Chọn Quận/Huyện" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả</SelectItem>
+                                    {valuePairList.map((item) => (
+                                        <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                name="Role"
+                                onValueChange={(value) => filterCommboBoxChange(value, "Role")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Nhóm" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả</SelectItem>
+                                    <SelectItem value="HTX_NN">Hợp tác xã Nông nghiệp</SelectItem>
+                                    <SelectItem value="HTX_PNN">Hợp tác xã Phi nông nghiệp</SelectItem>
+                                    <SelectItem value="QTD">Quỹ tín dụng</SelectItem>
+                                    <SelectItem value="LMHTX">Liên minh hợp tác xã</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                name="SurveyStatus"
+                                onValueChange={(value) => filterCommboBoxChange(value, "SurveyStatus")}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tiến độ" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả</SelectItem>
+                                    <SelectItem value="true">Đã tham gia</SelectItem>
+                                    <SelectItem value="false">Chưa tham gia</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </CardContent>
+                    </Card>
                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                             <Pie
-                                data={[
-                                    { name: "Đã tham gia", value: participatedHTX },
-                                    { name: "Chưa tham gia", value: totalHTX - participatedHTX },
-                                ]}
+                                data={pieData}
                                 dataKey="value"
                                 nameKey="name"
                                 cx="50%"
                                 cy="50%"
                                 outerRadius={80}
                                 fill="#8884d8"
-                                label
+                                label={renderCustomLabel}
                             >
                                 <Cell fill="#34d399" />
                                 <Cell fill="#52525b" />
@@ -250,11 +360,53 @@ export default function DashboardPage() {
                             <Tooltip />
                         </PieChart>
                     </ResponsiveContainer>
+                        <label>Tổng số: {totalHTX}</label>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[300px]">Tên tổ chức</TableHead>
+                                <TableHead className="w-[200px]">Họ Tên</TableHead>
+                                <TableHead className="w-[200px]">Tỉnh/Thành phố</TableHead>
+                                <TableHead className="w-[200px]">Phường/Xã</TableHead>
+                                <TableHead className="w-[200px]">Địa chỉ</TableHead>
+                                <TableHead className="w-[200px]">Số điện thoại</TableHead>
+                                <TableHead className="w-[200px]">Email</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {visibleUsers.map((item) => (
+                                <TableRow key={item.Id}>
+                                    <TableCell>{item.OrganizationName}</TableCell>
+                                    <TableCell>{item.Name}</TableCell>
+                                    <TableCell>{item.Province?.Name}</TableCell>
+                                    <TableCell>{item.Ward?.Name}</TableCell>
+                                    <TableCell>{item.Address}</TableCell>
+                                    <TableCell>{item.Username}</TableCell>
+                                    <TableCell>{item.Email}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    {usersList.length > 10 && (
+                        <div className="mt-4 text-center">
+                            <button
+                                className="text-blue-600 hover:underline"
+                                onClick={() => setShowUsersAll(!showUsersAll)}
+                            >
+                                {showUsersAll ? "Thu gọn" : "Xem thêm"}
+                            </button>
+                        </div>
+                    )}
+                    <div>
+                        <Button onClick={() => window.open(`${API.users}/export_filter?province_id=${filters.ProvinceId}&ward_id=${filters.WardId}&role=${filters.Role}&type=${filters.Type}&survey_status=${filters.SurveyStatus}`, "_blank")}>
+                            Xuất Excel
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
             {/* Biểu đồ cột */}
-            <Card>
+            {/* <Card>
                 <CardContent className="p-6">
                     <h2 className="text-lg font-semibold mb-4">Thời gian tham gia khảo sát (theo phút trong ngày)</h2>
                     <ResponsiveContainer width="100%" height={300}>
@@ -267,10 +419,10 @@ export default function DashboardPage() {
                         </BarChart>
                     </ResponsiveContainer>
                 </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Xếp hạng theo thời gian */}
-            <Card>
+            {/* <Card>
                 <CardContent className="p-6 space-y-2">
                     <h2 className="text-lg font-semibold">Danh sách HTX đã tham gia (xếp theo thời gian)</h2>
                     <ul className="space-y-1 list-decimal list-inside">
@@ -281,7 +433,7 @@ export default function DashboardPage() {
                         ))}
                     </ul>
                 </CardContent>
-            </Card>
+            </Card> */}
         </main>
     )
 }

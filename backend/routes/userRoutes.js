@@ -4,6 +4,7 @@ const userController = require("../controllers/userController");
 const upload = require("../middleware/upload");
 
 router.get("/", userController.getAllUsers);
+router.get("/export_filter/", userController.exportFilteredUser);
 router.get("/:id", userController.getUserById);
 router.get("/province/", userController.getUsersByProvince);
 
