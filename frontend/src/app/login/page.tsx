@@ -7,66 +7,103 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const ID_user = Cookies.get("ID_user");
-    console.log("🔍 DEBUG - Cookie hiện tại:", ID_user);
+    const token = Cookies.get("token");
+    const userRole = Cookies.get("userRole");
 
-    if (ID_user) {
-      router.push("/profile");
+    if (token && userRole) {
+      // Redirect based on role
+      if (userRole === 'admin') {
+        router.push("/admin");
+      } else if (userRole === 'LMHTX') {
+        router.push("/union");
+      } else if (['HTX', 'QTD'].includes(userRole)) {
+        router.push("/profile");
+      }
     }
   }, [router]);
 
-  const handleLogin = async () => {
-    const data = await login(username, password);
-    console.log("🔁 DEBUG - Kết quả từ API login:", data);
-  
-    if (data.success && data.user.Id && data.user.Role) {
-      Cookies.set("ID_user", data.user.Id, { expires: 1 });
-      Cookies.set("role", data.user.Role.toLowerCase(), { expires: 1 });
-      router.push("/profile");
-    } else {
-      alert(data.message || "Đăng nhập thất bại.");
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      toast.error("Vui lòng nhập đầy đủ thông tin đăng nhập");
+      return;
     }
-  
+
+    setIsLoading(true);
+    try {
+      const data = await login(username, password);
+
+      if (data.success && data.user.Id && data.user.Role) {
+        // Set cookies
+        Cookies.set("token", data.token, { expires: 1 });
+        Cookies.set("userRole", data.user.Role, { expires: 1 });
+        Cookies.set("userId", data.user.Id.toString(), { expires: 1 });
+
+        toast.success("Đăng nhập thành công");
+
+        // Redirect based on role
+        if (data.user.Role === 'admin') {
+          router.push("/admin");
+        } else if (data.user.Role === 'LMHTX') {
+          router.push("/union");
+        } else if (['HTX', 'QTD'].includes(data.user.Role)) {
+          router.push("/profile");
+        }
+      } else {
+        toast.error(data.message || "Đăng nhập thất bại");
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi đăng nhập");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-muted px-4">
       <Card className="w-full max-w-md shadow-lg border border-border">
         <CardHeader className="text-center space-y-1">
-          <CardTitle className="text-2xl font-bold text-primary">Chào mừng trở lại</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Xin chào</CardTitle>
           <CardDescription>Vui lòng đăng nhập để tiếp tục</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Tên đăng nhập</label>
-            <Input
-              placeholder="Nhập tên đăng nhập"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Mật khẩu</label>
-            <Input
-              type="password"
-              placeholder="Nhập mật khẩu"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <Button
-            className="w-full bg-primary text-white hover:bg-primary/90 transition"
-            onClick={handleLogin}
-          >
-            Đăng nhập
-          </Button>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Tên đăng nhập</label>
+              <Input
+                placeholder="Nhập tên đăng nhập"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Mật khẩu</label>
+              <Input
+                type="password"
+                placeholder="Nhập mật khẩu"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-primary text-white hover:bg-primary/90 transition"
+              disabled={isLoading}
+            >
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </main>

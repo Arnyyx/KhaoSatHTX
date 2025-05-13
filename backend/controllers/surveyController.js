@@ -33,6 +33,10 @@ exports.getSurveysProgress = async (req, res) => {
     }
 }
 
+exports.getSurveysByRoleNType = async (req, res) => { 
+
+}
+
 exports.getSurveysById = async (req, res) => { 
     try {
         const { id } = req.params;

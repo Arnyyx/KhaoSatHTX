@@ -22,12 +22,36 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-// Định nghĩa schema validation với zod
+// Define the Cooperative interface (matching CooperativeTable)
+interface Cooperative {
+    Id: number;
+    Username: string;
+    OrganizationName: string;
+    Name: string;
+    Role: "HTX" | "QTD";
+    Email: string;
+    Type: "NN" | "PNN";
+    ProvinceId: number;
+    WardId: number;
+    Address: string;
+    Position: string;
+    NumberCount: number;
+    EstablishedDate: string;
+    Member: "TV" | "KTV";
+    Status: boolean;
+}
+
+// Define the form schema with zod
 const formSchema = z.object({
     username: z.string().min(1, "Username là bắt buộc").max(50),
     organizationName: z.string().min(1, "Tên tổ chức là bắt buộc").max(255),
     name: z.string().min(1, "Tên người quản lý là bắt buộc").max(255),
-    password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự").max(255),
+    password: z
+        .string()
+        .optional()
+        .refine((val) => !val || val.length >= 6, {
+            message: "Mật khẩu phải có ít nhất 6 ký tự",
+        }),
     role: z.enum(["HTX", "QTD"]),
     email: z.string().email("Email không hợp lệ").max(100),
     type: z.enum(["NN", "PNN"]),
@@ -45,9 +69,15 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Mock API để lấy danh sách tỉnh và xã
+// Define props for CooperativeForm
+interface CooperativeFormProps {
+    initialData?: Cooperative;
+    onSubmit: (data: FormValues) => Promise<void>;
+    onCancel: () => void;
+}
+
+// Mock API to fetch provinces and wards
 async function fetchProvinces() {
-    // Thay bằng API thực tế
     return [
         { id: 1, name: "Hà Nội" },
         { id: 2, name: "TP. Hồ Chí Minh" },
@@ -55,7 +85,6 @@ async function fetchProvinces() {
 }
 
 async function fetchWards(provinceId: number) {
-    // Thay bằng API thực tế
     return [
         { id: 1, name: "Xã A", provinceId: 1 },
         { id: 2, name: "Xã B", provinceId: 1 },
@@ -63,57 +92,80 @@ async function fetchWards(provinceId: number) {
     ];
 }
 
-export function CooperativeForm() {
+export function CooperativeForm({ initialData, onSubmit, onCancel }: CooperativeFormProps) {
     const [provinces, setProvinces] = useState<{ id: number; name: string }[]>([]);
     const [wards, setWards] = useState<{ id: number; name: string }[]>([]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: {
-            username: "",
-            organizationName: "",
-            name: "",
-            password: "",
-            role: "HTX",
-            email: "",
-            type: "NN",
-            provinceId: 0,
-            wardId: 0,
-            address: "",
-            position: "",
-            numberCount: 1,
-            establishedDate: "",
-            member: "TV",
-            status: true,
-        },
+        defaultValues: initialData
+            ? {
+                username: initialData.Username,
+                organizationName: initialData.OrganizationName,
+                name: initialData.Name,
+                password: "", // Password is not populated for editing
+                role: initialData.Role,
+                email: initialData.Email,
+                type: initialData.Type,
+                provinceId: initialData.ProvinceId,
+                wardId: initialData.WardId,
+                address: initialData.Address,
+                position: initialData.Position,
+                numberCount: initialData.NumberCount,
+                establishedDate: initialData.EstablishedDate.split("T")[0], // Format date for input
+                member: initialData.Member,
+                status: initialData.Status,
+            }
+            : {
+                username: "",
+                organizationName: "",
+                name: "",
+                password: "",
+                role: "HTX",
+                email: "",
+                type: "NN",
+                provinceId: 0,
+                wardId: 0,
+                address: "",
+                position: "",
+                numberCount: 1,
+                establishedDate: "",
+                member: "TV",
+                status: true,
+            },
     });
 
-    // Lấy danh sách tỉnh khi component mount
+    // Fetch provinces when component mounts
     useEffect(() => {
         fetchProvinces().then(setProvinces);
     }, []);
 
-    // Lấy danh sách xã khi tỉnh thay đổi
+    // Fetch wards when provinceId changes
     useEffect(() => {
         const provinceId = form.watch("provinceId");
         if (provinceId) {
             fetchWards(provinceId).then((wards) =>
                 setWards(wards.filter((ward) => ward.provinceId === provinceId))
             );
+            // Reset wardId if province changes
+            if (form.getValues("provinceId") !== initialData?.ProvinceId) {
+                form.setValue("wardId", 0);
+            }
         }
-    }, [form.watch("provinceId")]);
+    }, [form.watch("provinceId"), initialData]);
 
-    // Xử lý submit form
-    function onSubmit(values: FormValues) {
-        console.log(values);
-        // Gửi dữ liệu đến API hoặc xử lý tiếp
+    // Handle form submission
+    function handleSubmit(values: FormValues) {
+        onSubmit(values);
     }
 
     return (
-        <div >
-            <h1 className="text-xl font-bold mb-4">Tạo Hợp tác xã/Quỹ tín dụng</h1>
+        <div>
+            <h1 className="text-xl font-bold mb-4">
+                {initialData ? "Sửa Hợp tác xã/Quỹ tín dụng" : "Tạo Hợp tác xã/Quỹ tín dụng"}
+            </h1>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
@@ -157,19 +209,25 @@ export function CooperativeForm() {
                             )}
                         />
 
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Mật khẩu</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" placeholder="Nhập mật khẩu" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {!initialData && (
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Mật khẩu</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="password"
+                                                placeholder="Nhập mật khẩu"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
 
                         <FormField
                             control={form.control}
@@ -278,7 +336,10 @@ export function CooperativeForm() {
                                         </FormControl>
                                         <SelectContent>
                                             {wards.map((ward) => (
-                                                <SelectItem key={ward.id} value={ward.id.toString()}>
+                                                <SelectItem
+                                                    key={ward.id}
+                                                    value={ward.id.toString()}
+                                                >
                                                     {ward.name}
                                                 </SelectItem>
                                             ))}
@@ -382,9 +443,11 @@ export function CooperativeForm() {
                                         onValueChange={(value) => field.onChange(value === "true")}
                                         defaultValue={field.value.toString()}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn trạng thái" />
-                                        </SelectTrigger>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Chọn trạng thái" />
+                                            </SelectTrigger>
+                                        </FormControl>
                                         <SelectContent>
                                             <SelectItem value="true">Hoạt động</SelectItem>
                                             <SelectItem value="false">Không hoạt động</SelectItem>
@@ -396,8 +459,11 @@ export function CooperativeForm() {
                         />
                     </div>
 
-                    <div className="flex justify-end mt-6">
-                        <Button type="submit">Tạo</Button>
+                    <div className="flex justify-end mt-6 space-x-2">
+                        <Button type="submit">{initialData ? "Cập nhật" : "Tạo"}</Button>
+                        <Button type="button" variant="outline" onClick={onCancel}>
+                            Hủy
+                        </Button>
                     </div>
                 </form>
             </Form>

@@ -1,10 +1,11 @@
-import { UserTable } from "@/components/UserTable";
+// app/users/page.tsx
+import { UserTable } from '@/components/users/UserTable';
 
-export default function Home() {
+export default function UsersPage() {
     return (
-        <main className="container mx-auto py-8">
+        <div className="container mx-auto py-10">
             <h1 className="text-2xl font-bold mb-6">User Management</h1>
             <UserTable />
-        </main>
+        </div>
     );
 }

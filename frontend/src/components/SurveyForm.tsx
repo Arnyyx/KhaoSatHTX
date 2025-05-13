@@ -23,8 +23,17 @@ interface SurveyFormProps {
     onCancel: () => void;
 }
 
+// Define the type for formData
+interface FormData {
+    Title: string;
+    Description: string;
+    StartTime: Date;
+    EndTime: Date;
+    Status: boolean;
+}
+
 export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps) {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormData>({
         Title: initialData?.Title || "",
         Description: initialData?.Description || "",
         StartTime: initialData?.StartTime
@@ -35,9 +44,9 @@ export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps)
         EndTime: initialData?.EndTime
             ? isValid(parseISO(initialData.EndTime))
                 ? parseISO(initialData.EndTime)
-                : addMinutes(new Date(), 60) // Mặc định EndTime sau StartTime 1 giờ
+                : addMinutes(new Date(), 60)
             : addMinutes(new Date(), 60),
-        Status: initialData?.Status || true,
+        Status: initialData?.Status ?? true, // Use nullish coalescing for clarity
     });
 
     const [openStart, setOpenStart] = useState(false);
@@ -139,7 +148,9 @@ export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps)
                             </select>
                             <select
                                 value={formData.StartTime.getMinutes().toString().padStart(2, "0")}
-                                onChange={(e) => handleTimeChange("StartTime", e.target.value, "minute")}
+                                onChange={(e) =>
+                                    handleTimeChange("StartTime", e.target.value, "minute")
+                                }
                                 className="rounded-md border p-2"
                             >
                                 {Array.from({ length: 60 }, (_, i) => (
@@ -216,9 +227,7 @@ export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps)
                 <Switch
                     id="status"
                     checked={formData.Status}
-                    onCheckedChange={(checked) =>
-                        setFormData({ ...formData, Status: checked })
-                    }
+                    onCheckedChange={(checked) => setFormData({ ...formData, Status: checked })}
                 />
                 <Label htmlFor="status">Active Status</Label>
             </div>

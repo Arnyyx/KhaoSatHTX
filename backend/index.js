@@ -14,6 +14,9 @@ app.use(cors({
   credentials: true // nếu bạn cần gửi cookie hoặc Authorization Header
 }));
 
+
+//app.use(cors({}));
+
 // Middleware đọc JSON
 app.use(express.json());
 
@@ -22,13 +25,11 @@ sequelize.sync({ force: false }).then(() => {
 });
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
-const wardsMld = require('./routes/wardsRounter.js');
+const wardsMld = require('./routes/wardsRouter.js');
 app.use('/api/wards', wardsMld);
 
 // Route mặc định
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
-
-// Import router
 
 const surveyRoutes = require('./routes/surveysRouter');
 app.use('/api/surveys', surveyRoutes);

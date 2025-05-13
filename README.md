@@ -96,3 +96,10 @@ CREATE TABLE Results (
     FOREIGN KEY (UserId) REFERENCES Users(Id),
     FOREIGN KEY (QuestionId) REFERENCES Questions(Id)
 );
+
+
+
+run:
+npm install redis, npm install jsonwebtoken
+npm install --save-dev @types/jsonwebtoken
+

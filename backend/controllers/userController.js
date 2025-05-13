@@ -4,32 +4,44 @@ const { Readable } = require("stream");
 const ExcelJS = require('exceljs');
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
-const { poolPromise } = require("../db");
 const Province = require("../models/Province");
 const Ward = require("../models/Ward");
+const XLSX = require("xlsx");
+const fs = require("fs");
+const userQueue = require("../queue/userQueue");
+const { mapExcelHeaders, checkRequiredHeaders, validateUserData } = require("../utils/userUtils");
+const { formatDateToDDMMYYYY, parseDateFromDDMMYYYY } = require("../utils/dateUtils");
+const jwt = require('jsonwebtoken');
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const { page, limit, search } = req.query;
+        const { page, limit, search, sortColumn, sortDirection } = req.query;
 
         if (page && limit) {
             const offset = (page - 1) * limit;
             const where = search ? {
-                Username: { [Op.like]: `%${search}%`, },
-                Name: { [Op.like]: `%${search}%`, },
-                Email: { [Op.like]: `%${search}%`, },
-                OrganizationName: { [Op.like]: `%${search}%`, },
-                Address: { [Op.like]: `%${search}%`, },
-                Position: { [Op.like]: `%${search}%`, },
-                NumberCount: { [Op.like]: `%${search}%`, },
-                EstablishedDate: { [Op.like]: `%${search}%`, },
-                Member: { [Op.like]: `%${search}%`, },
-                Status: { [Op.like]: `%${search}%`, },
+                [Op.or]: [
+                    { Username: { [Op.like]: `%${search}%` } },
+                    { Name: { [Op.like]: `%${search}%` } },
+                    { Email: { [Op.like]: `%${search}%` } },
+                    { OrganizationName: { [Op.like]: `%${search}%` } },
+                    { Address: { [Op.like]: `%${search}%` } },
+                    { Position: { [Op.like]: `%${search}%` } },
+                    { NumberCount: { [Op.like]: `%${search}%` } },
+                    { EstablishedDate: { [Op.like]: `%${search}%` } },
+                    { Member: { [Op.like]: `%${search}%` } },
+                    { Status: { [Op.like]: `%${search}%` } },
+                    { '$Province.Name$': { [Op.like]: `%${search}%` } },
+                    { '$Ward.Name$': { [Op.like]: `%${search}%` } },
+                    { Role: { [Op.like]: `%${search}%` } },
+                    { Type: { [Op.like]: `%${search}%` } },
+                ]
             } : {};
             const users = await User.findAndCountAll({
                 where,
                 offset: parseInt(offset),
                 limit: parseInt(limit),
+                order: [[sortColumn, sortDirection]],
                 include: [{
                     association: 'Province',
                     attributes: ['Name']
@@ -40,23 +52,19 @@ exports.getAllUsers = async (req, res) => {
                 }]
 
             });
-            return res.status(200).json(users);
+            return res.status(200).json({ total: users.count, items: users.rows });
         }
 
         const users = await User.findAll({
-            include: [
-                {
-                    association: 'Province',
-                    attributes: ['Name']
-                },
-                {
-                    association: 'Ward',
-                    attributes: ['Name']
-                }
-            ]
-
+            include: [{
+                association: 'Province',
+                attributes: ['Name']
+            }, {
+                association: 'Ward',
+                attributes: ['Name']
+            }],
         });
-        res.status(200).json(users);
+        res.status(200).json({ total: users.length, items: users });
     } catch (err) {
         res.status(400).json({ message: "Lỗi", error: err.message });
     }
@@ -65,7 +73,15 @@ exports.getAllUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await User.findByPk(id);
+        if (isNaN(id)) {
+            return res.status(400).json({ message: "ID phải là số nguyên" });
+        }
+        const user = await User.findByPk(id, {
+            include: [
+                { association: "Province", attributes: ["Name"] },
+                { association: "Ward", attributes: ["Name"] },
+            ],
+        });
         if (user) {
             res.status(200).json({ message: "Lấy user thành công", user });
         } else {
@@ -77,13 +93,21 @@ exports.getUserById = async (req, res) => {
     }
 };
 
+
+
 // Thêm một user
 exports.createUser = async (req, res) => {
     try {
+        console.log("Request body:", req.body);
         const user = await User.create(req.body);
         res.status(201).json({ message: "Tạo user thành công", user });
     } catch (error) {
-        res.status(400).json({ message: "Lỗi khi tạo user", error: error.message });
+        console.error("Error creating user:", error);
+        res.status(400).json({
+            message: "Lỗi khi tạo user",
+            error: error.message,
+            details: error.errors ? error.errors.map(e => e.message) : []
+        });
     }
 };
 
@@ -118,59 +142,6 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-// Thêm nhiều user từ CSV
-exports.bulkCreateUsers = async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: "Vui lòng upload file CSV" });
-        }
-
-        const users = [];
-        const parser = parse({ columns: true, trim: true });
-
-        const stream = Readable.from(req.file.buffer.toString());
-        stream.pipe(parser);
-
-        parser.on("data", (row) => {
-            users.push({
-                Username: row.Username,
-                OrganizationName: row.OrganizationName || null,
-                Name: row.Name || null,
-                Password: row.Password,
-                Role: row.Role,
-                Email: row.Email,
-                Type: row.Type,
-                ProvinceId: row.ProvinceId ? parseInt(row.ProvinceId) : null,
-                DistrictId: row.DistrictId ? parseInt(row.DistrictId) : null,
-                WardId: row.WardId ? parseInt(row.WardId) : null,
-                Address: row.Address || null,
-                Position: row.Position || null,
-                NumberCount: row.NumberCount ? parseInt(row.NumberCount) : null,
-                EstablishedDate: row.EstablishedDate || null,
-                Member: row.Member || null,
-                Status: row.Status ? row.Status === "true" : null,
-                IsLocked: row.IsLocked ? row.IsLocked === "true" : null,
-                SurveyStatus: row.SurveyStatus ? row.SurveyStatus === "true" : null,
-                SurveyTime: row.SurveyTime ? parseInt(row.SurveyTime) : null,
-            });
-        });
-
-        parser.on("end", async () => {
-            try {
-                await User.bulkCreate(users, { validate: true });
-                res.status(201).json({ message: "Thêm nhiều user thành công", count: users.length });
-            } catch (error) {
-                res.status(400).json({ message: "Lỗi khi thêm nhiều user", error: error.message });
-            }
-        });
-
-        parser.on("error", (error) => {
-            res.status(400).json({ message: "Lỗi khi phân tích file CSV", error: error.message });
-        });
-    } catch (error) {
-        res.status(400).json({ message: "Lỗi khi xử lý file", error: error.message });
-    }
-};
 
 exports.getUsersByProvince = async (req, res) => {
     try {
@@ -204,45 +175,61 @@ exports.userLogin = async (req, res) => {
     const { username, password } = req.body;
 
     try {
-      const user = await User.findOne({
-        where: {
-            Username: username, 
-            Password: password 
-        } // Nếu chưa mã hóa mật khẩu
-      });
-  
-      if (!user) {
-        return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
-      }
-  
-      const isLocked = user.IsLocked === true || user.IsLocked === 1;
-      const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
-  
-      if (isLocked) {
-        const message = surveyStatus
-          ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
-          : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
-        return res.json({ success: false, message });
-      }
-  
-      res.cookie('ID_user', user.Id, {
-        httpOnly: true,
-        sameSite: 'Lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-  
-      res.cookie('role', user.Role.toLowerCase(), {
-        httpOnly: true,
-        sameSite: 'Lax',
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-  
-      return res.json({ success: true, user });
+        const user = await User.findOne({
+            where: {
+                Username: username,
+                Password: password
+            }
+        });
+
+        if (!user) {
+            return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
+        }
+
+        const isLocked = user.IsLocked === true || user.IsLocked === 1;
+        const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
+
+        if (isLocked) {
+            const message = surveyStatus
+                ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
+                : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
+            return res.json({ success: false, message });
+        }
+
+        res.cookie('ID_user', user.Id, {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.cookie('role', user.Role.toLowerCase(), {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        const payload = {
+            id: user.Id,
+            username: user.Username,
+            role: user.Role,
+        };
+
+        const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
+
+        res.cookie('token', token, {
+            httpOnly: false,
+            secure: false,
+            sameSite: 'Lax',
+            maxAge: 3600 * 1000,
+        });
+
+
+        return res.json({ success: true, user });
     } catch (err) {
-      console.error('Login error:', err);
-      return res.status(500).send('Server Error');
+        console.error('Login error:', err);
+        return res.status(500).send('Server Error');
     }
 };
 exports.exportFilteredUser = async (req, res) => {
@@ -312,3 +299,290 @@ exports.exportFilteredUser = async (req, res) => {
       res.status(500).send('Export failed');
   }
 };
+
+exports.logout = (req, res) => {
+    try {
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'Lax',
+        });
+
+        res.clearCookie('ID_user', {
+            httpOnly: false,
+            sameSite: 'Lax',
+        });
+        res.clearCookie('role', {
+            httpOnly: false,
+            sameSite: 'Lax',
+        });
+
+        res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ success: false, message: 'Lỗi khi đăng xuất', error: error.message });
+    }
+};
+
+exports.userLogin = async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        const user = await User.findOne({
+            where: {
+                Username: username,
+                Password: password
+            } // Nếu chưa mã hóa mật khẩu
+        });
+
+        if (!user) {
+            return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
+        }
+
+        const isLocked = user.IsLocked === true || user.IsLocked === 1;
+        const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
+
+        if (isLocked) {
+            const message = surveyStatus
+                ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
+                : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
+            return res.json({ success: false, message });
+        }
+
+        res.cookie('ID_user', user.Id, {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.cookie('role', user.Role.toLowerCase(), {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        const payload = {
+            id: user.Id,
+            username: user.Username,
+            role: user.Role,
+        };
+
+        const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'Lax',
+            maxAge: 3600 * 1000, // 1 giờ
+        });
+
+
+        return res.json({ success: true, user });
+    } catch (err) {
+        console.error('Login error:', err);
+        return res.status(500).send('Server Error');
+    }
+};
+
+exports.exportUsers = async (req, res) => {
+    try {
+        const ids = req.body ? req.body.ids : null;
+        let users;
+
+        if (ids) {
+            const idArray = ids
+                .split(",")
+                .map((id) => parseInt(id.trim()))
+                .filter((id) => !isNaN(id));
+
+            if (idArray.length === 0) {
+                return res.status(400).json({
+                    message: "Danh sách ID không hợp lệ",
+                });
+            }
+
+            users = await User.findAll({
+                where: {
+                    Id: idArray,
+                },
+                include: [
+                    { association: "Province", attributes: ["Name"] },
+                    { association: "Ward", attributes: ["Name"] },
+                ],
+            });
+
+            if (users.length === 0) {
+                return res.status(404).json({
+                    message: "Không tìm thấy user nào với danh sách ID cung cấp",
+                });
+            }
+        } else {
+            users = await User.findAll({
+                include: [
+                    { association: "Province", attributes: ["Name"] },
+                    { association: "Ward", attributes: ["Name"] },
+                ],
+            });
+        }
+
+        const userData = users.map((user) => ({
+            "Mã": user.Id,
+            "Tên đăng nhập": user.Username,
+            "Mật khẩu": user.Password,
+            "Tên tổ chức": user.OrganizationName,
+            "Họ tên": user.Name,
+            "Email": user.Email,
+            "Vai trò": user.Role,
+            "Loại": user.Type,
+            "Tỉnh/Thành phố": user.Province ? user.Province.Name : null,
+            "Phường/Xã": user.Ward ? user.Ward.Name : null,
+            "Địa chỉ": user.Address,
+            "Chức vụ": user.Position,
+            "Số lượng": user.NumberCount,
+            "Ngày thành lập": formatDateToDDMMYYYY(user.EstablishedDate),
+            "Thành viên": user.Member,
+            "Trạng thái": user.Status,
+            "Khóa": user.IsLocked,
+            "Trạng thái khảo sát": user.SurveyStatus,
+            "Thời gian khảo sát": user.SurveyTime,
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(userData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+        const excelBuffer = XLSX.write(workbook, {
+            type: "buffer",
+            bookType: "xlsx",
+        });
+
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=users.xlsx"
+        );
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+
+        res.status(200).send(excelBuffer);
+    } catch (error) {
+        console.error("Error in exportUsers:", error);
+        res.status(400).json({
+            message: "Lỗi khi xuất file Excel",
+            error: error.message,
+        });
+    }
+};
+
+
+exports.importUsers = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "Vui lòng tải lên file Excel" });
+        }
+
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        fs.unlinkSync(req.file.path);
+
+        const headers = data[0];
+        const headerMap = mapExcelHeaders(headers);
+        const missingHeaders = checkRequiredHeaders(headerMap);
+        if (missingHeaders.length > 0) {
+            return res.status(400).json({
+                message: "Thiếu các header bắt buộc",
+                missing: missingHeaders,
+            });
+        }
+
+        const usersData = data.slice(1).map((row) => {
+            const user = {};
+            headers.forEach((header, index) => {
+                if (headerMap[header]) {
+                    user[headerMap[header]] = row[index];
+                }
+            });
+            return user;
+        });
+
+        const job = await userQueue.add({ usersData });
+
+        res.status(202).json({
+            message: "Đang xử lý file Excel, bạn sẽ nhận kết quả sau",
+            jobId: job.id,
+        });
+    } catch (error) {
+        console.error("Error in importUsers:", error);
+        res.status(400).json({
+            message: "Lỗi khi nhập file Excel",
+            error: error.message,
+        });
+    }
+};
+
+
+userQueue.process(async (job) => {
+    console.time(`Job ${job.id}`);
+    const { usersData } = job.data;
+    const errors = [];
+    const createdUsers = [];
+    const BATCH_SIZE = 20;
+
+    const provinces = await Province.findAll({ attributes: ["Id", "Name"] });
+    const wards = await Ward.findAll({ attributes: ["Id", "Name"] });
+    const provinceMap = new Map(provinces.map((p) => [p.Name, p.Id]));
+    const wardMap = new Map(wards.map((w) => [w.Name, w.Id]));
+
+    for (let i = 0; i < usersData.length; i += BATCH_SIZE) {
+        const batch = usersData.slice(i, i + BATCH_SIZE);
+
+        await sequelize.transaction(async (t) => {
+            for (const row of batch) {
+                try {
+                    const validationErrors = validateUserData(row);
+                    if (validationErrors.length > 0) {
+                        errors.push({ row, errors: validationErrors });
+                        continue;
+                    }
+
+                    const userData = {
+                        Username: row.Username,
+                        Password: row.Password,
+                        OrganizationName: row.OrganizationName,
+                        Name: row.Name,
+                        Role: row.Role,
+                        Email: row.Email,
+                        Type: row.Type,
+                        ProvinceId: row.Province ? provinceMap.get(row.Province) : null,
+                        WardId: row.Ward ? wardMap.get(row.Ward) : null,
+                        Address: row.Address,
+                        Position: row.Position,
+                        NumberCount: row.NumberCount ? parseInt(row.NumberCount) : null,
+                        EstablishedDate: parseDateFromDDMMYYYY(row.EstablishedDate),
+                        Member: row.Member,
+                        Status: row.Status === "true" || row.Status === true,
+                        IsLocked: row.IsLocked === "true" || row.IsLocked === true,
+                        SurveyStatus: row.SurveyStatus === "true" || row.SurveyStatus === true,
+                        SurveyTime: row.SurveyTime ? parseInt(row.SurveyTime) : null,
+                    };
+
+                    const user = await User.create(userData, { transaction: t });
+                    createdUsers.push(user);
+                } catch (error) {
+                    errors.push({ row, error: error.message });
+                }
+            }
+        });
+    }
+
+    console.timeEnd(`Job ${job.id}`);
+    console.log(`Processed job ${job.id}: ${createdUsers.length} users created, ${errors.length} errors`);
+
+    return { created: createdUsers.length, errors };
+});
