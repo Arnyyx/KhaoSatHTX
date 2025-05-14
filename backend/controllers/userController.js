@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const { parse } = require("csv-parse");
 const { Readable } = require("stream");
+const ExcelJS = require('exceljs');
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 const Province = require("../models/Province");
@@ -254,6 +255,73 @@ exports.userLogin = async (req, res) => {
         console.error('Login error:', err);
         return res.status(500).send('Server Error');
     }
+};
+exports.exportFilteredUser = async (req, res) => {
+  try {
+    const whereClause = {};
+
+    if (req.query.province_id !== 'undefined') {
+        whereClause.ProvinceId = req.query.province_id;
+    }
+
+    if (req.query.ward_id !== 'undefined') {
+        whereClause.WardId = req.query.ward_id;
+    }
+
+    if (req.query.role !== 'undefined') {
+        whereClause.Role = req.query.role;
+    }
+
+    if (req.query.type !== 'undefined') {
+        whereClause.Type = req.query.type;
+    }
+
+    if (req.query.survey_status !== 'undefined') {
+        whereClause.SurveyStatus = req.query.survey_status === 'true';
+    }
+
+    const users = await User.findAll({
+        where: whereClause,
+        attributes: ['OrganizationName', 'Name', 'Address', 'Username', 'Email'],
+        include: [{
+            association: 'Province',
+            attributes: ['Name']
+        },
+        {
+            association: 'Ward',
+            attributes: ['Name']
+        }]
+    });
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Người dùng');
+      worksheet.columns = [
+            { header: 'Tên tổ chức', key: 'OrganizationName', width: 30 },
+            { header: 'Tên người dùng', key: 'Name', width: 30 },
+            { header: 'Tên tỉnh', key: 'ProvinceName', width: 30 },
+            { header: 'Tên huyện', key: 'WardName', width: 30 },
+            { header: 'Địa chỉ', key: 'Address', width: 30 },
+            { header: 'SDT', key: 'Username', width: 20 },
+            { header: 'Email', key: 'Email', width: 30 },
+      ];
+      const rows = users.map((user) => {
+          const u = user.toJSON();
+          return {
+              ...u,
+              ProvinceName: u.Province?.Name || '',
+              WardName: u.Ward?.Name || '',
+          };
+      });
+      worksheet.addRows(rows);
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=FilteredUsers.xlsx');
+
+      await workbook.xlsx.write(res);
+      res.end();
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Export failed');
+  }
 };
 
 exports.logout = (req, res) => {

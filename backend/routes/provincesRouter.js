@@ -6,6 +6,7 @@ require('dotenv').config();
 const router = express.Router();
 const provincesController = require("../controllers/provinceController");
 
+router.get('/users_num', provincesController.getProvincesUsersNum);
 // router.get('/', async (req, res) => {
 //   try {
 //     const pool = await poolPromise;

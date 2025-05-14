@@ -6,8 +6,30 @@ const { Op } = require("sequelize");
 const sequelize = require("../config/database");
 const tableName = 'Provinces';
 const ExcelJS = require('exceljs');
+const { Console } = require("console");
 require('dotenv').config();
 
+exports.getProvincesUsersNum = async (req, res) => {
+    try
+    {
+        const provinces = await sequelize.query(`
+            SELECT Id, Name, 
+            (SELECT Count(Id) FROM Users WHERE ProvinceId = Provinces.Id) as UsersNum
+            FROM Provinces
+          `, { type: sequelize.QueryTypes.SELECT });
+        if(provinces) {
+            res.status(200).json(provinces)
+        }
+        else {
+            res.status(400).json({message:'Không tìm thấy Tỉnh'})
+        }
+    }
+    catch(error)
+    {
+        console.log('Lỗi tại getProvincesUsersNum', error);
+        res.status(400).json({ message: "Lỗi khi lấy Tỉnh", error: error.message });
+    }
+};
 exports.getAllProvinces = async (req, res) => {
     try {
         const { page, limit, search } = req.query;
