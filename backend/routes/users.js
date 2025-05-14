@@ -28,10 +28,10 @@ router.post('/login', async (req, res) => {
             const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
             try {
                 res.cookie('token', token, {
-                    httpOnly: true,  // Giúp bảo mật cookie khỏi các tấn công XSS
-                    secure: process.env.NODE_ENV === 'production',  // Cookie chỉ truyền qua HTTPS khi ở môi trường production
-                    maxAge: 3600 * 1000,  // Thời gian sống của cookie (1 giờ)
-                    sameSite: 'Strict'  // Giới hạn cookie không gửi từ các domain khác
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    maxAge: 3600 * 1000,
+                    sameSite: 'Strict'
                 });
 
                 await client.set(`whitelist:${token}`, 'valid', { EX: 3600 });
@@ -59,12 +59,10 @@ router.post('/logout', authenticateToken, async (req, res) => {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         const ttl = Math.max(1, decoded.exp - Math.floor(Date.now() / 1000));
 
-        // Thêm token vào blacklist Redis
         await client.set(`blacklist:${token}`, 'invalid', { EX: ttl });
         await client.del(`whitelist:${token}`);
 
-        // Xóa cookie token
-        res.clearCookie('token', { path: '/' });  // Xóa cookie "token"
+        res.clearCookie('token', { path: '/' });
 
         res.json({ message: 'Logout successful' });
     } catch (error) {

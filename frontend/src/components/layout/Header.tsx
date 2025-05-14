@@ -16,10 +16,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+
+// Custom hook to listen for cookie changes
+function useCookieChange(cookieName: string) {
+    const [value, setValue] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        const checkCookie = () => {
+            const cookieValue = Cookies.get(cookieName);
+            setValue(cookieValue);
+        };
+
+        // Check initially
+        checkCookie();
+
+        // Set up an interval to check for changes
+        const interval = setInterval(checkCookie, 1000);
+
+        return () => clearInterval(interval);
+    }, [cookieName]);
+
+    return value;
+}
 
 export function Header() {
     const router = useRouter();
-    const userRole = Cookies.get("userRole");
+    const userRole = useCookieChange("userRole");
 
     const handleLogout = async () => {
         try {
@@ -51,8 +74,9 @@ export function Header() {
                 ];
             case "LMHTX":
                 return [
+                    { label: "Thông tin cá nhân", href: "/union/profile" },
                     { label: "Báo cáo", href: "/union/reports" },
-                    { label: "Quản lý HTX", href: "/union/htx" },
+                    { label: "Quản lý HTX", href: "/union/management" },
                 ];
             case "HTX":
                 return [{ label: "Làm khảo sát", href: "/survey" }];

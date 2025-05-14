@@ -59,3 +59,29 @@ export interface Ward {
     Id: number;
     Name: string;
 }
+
+export interface ProfileCardProps {
+    user: {
+        Id: number;
+        Username: string;
+        OrganizationName: string;
+        Name: string;
+        Role: string;
+        Email: string;
+        Type: string;
+        ProvinceId: number;
+        DistrictId: number;
+        WardId: number;
+        Address: string;
+        Position: string;
+        NumberCount?: number;
+        EstablishedDate: string;
+        MemberTV?: number;
+        MemberKTV?: number;
+        Status: boolean;
+        IsLocked: boolean;
+        SurveySuccess: number;
+        SurveyTime: number;
+    };
+    isAdmin?: boolean;
+}

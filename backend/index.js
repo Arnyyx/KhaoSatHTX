@@ -7,28 +7,22 @@ require('dotenv').config();
 
 const app = express();
 
-// Cấu hình CORS: chỉ cho phép frontend localhost:3000
 app.use(cors({
-  origin: 'http://localhost:3000', // chỉ cho phép từ localhost:3000
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Các method được phép
-  credentials: true // nếu bạn cần gửi cookie hoặc Authorization Header
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true
 }));
 
-
-//app.use(cors({}));
-
-// Middleware đọc JSON
 app.use(express.json());
 
 sequelize.sync({ force: false }).then(() => {
-    console.log("Đồng bộ database thành công");
+  console.log("Đồng bộ database thành công");
 });
 const provincesMld = require('./routes/provincesRouter.js');
 app.use('/api/provinces', provincesMld);
 const wardsMld = require('./routes/wardsRouter.js');
 app.use('/api/wards', wardsMld);
 
-// Route mặc định
 app.get('/', (req, res) => res.send('KhaoSatHTX API is running 🚀'));
 
 const surveyRoutes = require('./routes/surveysRouter');
@@ -42,7 +36,7 @@ app.use('/api/questions', questionRoutes);
 
 const resultRoutes = require('./routes/resultsRouter.js');
 app.use('/api/results', resultRoutes)
-// Chạy server
+
 const port = process.env.PORT;
 app.listen(port, () => {
   console.log(`🚀 Server is running at http://localhost:${port}`);

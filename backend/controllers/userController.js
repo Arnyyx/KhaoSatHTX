@@ -126,7 +126,6 @@ exports.updateUser = async (req, res) => {
     }
 };
 
-// Xóa một user
 exports.deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
@@ -144,23 +143,48 @@ exports.deleteUser = async (req, res) => {
 
 exports.getUsersByProvince = async (req, res) => {
     try {
-        const { provinceId, page = 1, limit = 10 } = req.query;
+        const { provinceId, page, limit, search, sortColumn, sortDirection } = req.query;
         const offset = (page - 1) * limit;
+        const where = search ? {
+            [Op.or]: [
+                { Username: { [Op.like]: `%${search}%` } },
+                { Name: { [Op.like]: `%${search}%` } },
+                { Email: { [Op.like]: `%${search}%` } },
+                { OrganizationName: { [Op.like]: `%${search}%` } },
+                { Address: { [Op.like]: `%${search}%` } },
+                { Position: { [Op.like]: `%${search}%` } },
+                { NumberCount: { [Op.like]: `%${search}%` } },
+                { EstablishedDate: { [Op.like]: `%${search}%` } },
+                { Member: { [Op.like]: `%${search}%` } },
+                { Status: { [Op.like]: `%${search}%` } },
+                { '$Ward.Name$': { [Op.like]: `%${search}%` } },
+                { Role: { [Op.like]: `%${search}%` } },
+                { Type: { [Op.like]: `%${search}%` } },
+            ]
+        } : {};
+
         const users = await User.findAndCountAll({
+            where,
             where: {
-                Role: ["HTX", "QTD"],
                 ProvinceId: provinceId,
+                Role: ["HTX", "QTD"],
             },
             offset: parseInt(offset),
             limit: parseInt(limit),
+            order: sortColumn && sortDirection ? [[sortColumn, sortDirection]] : [],
+            include: [{
+                association: 'Province',
+                attributes: ['Name']
+            },
+            {
+                association: 'Ward',
+                attributes: ['Name']
+            }]
         });
 
         res.status(200).json({
-            message: "Lấy danh sách user thành công",
-            users: users.rows,
             total: users.count,
-            page: parseInt(page),
-            limit: parseInt(limit),
+            items: users.rows,
         });
     } catch (error) {
         res.status(400).json({
