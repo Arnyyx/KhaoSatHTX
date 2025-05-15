@@ -5,6 +5,7 @@ const Province = require("./Province");
 const Ward = require("./Ward");
 const SurveyAccessRule = require("./SurveyAccessRule");
 const Result = require("./Result");
+const UserSurveyStatus = require("./UserSurveyStatus");
 
 // Thiết lập mối quan hệ
 Survey.hasMany(Question, {
@@ -49,7 +50,7 @@ User.hasMany(Result, {
 });
 Result.belongsTo(User, {
     foreignKey: 'UserId',
-    as: 'Users'
+    as: 'User'
 });
 
 Question.hasMany(Result, {
@@ -58,14 +59,46 @@ Question.hasMany(Result, {
 });
 Result.belongsTo(Question, {
     foreignKey: 'QuestionId',
-    as: 'Questions'
+    as: 'Question'
 });
 
 Survey.hasMany(SurveyAccessRule, {
     foreignKey: "SurveyId",
-    as: "SurveyAccessRules",
+    as: "AccessRules",
 });
 SurveyAccessRule.belongsTo(Survey, {
     foreignKey: "SurveyId",
     as: "Survey",
 });
+
+// UserSurveyStatus relationships
+User.hasMany(UserSurveyStatus, {
+    foreignKey: 'UserId',
+    as: 'SurveyStatuses'
+});
+
+UserSurveyStatus.belongsTo(User, {
+    foreignKey: 'UserId',
+    as: 'User'
+});
+
+Survey.hasMany(UserSurveyStatus, {
+    foreignKey: 'SurveyId',
+    as: 'UserStatuses'
+});
+
+UserSurveyStatus.belongsTo(Survey, {
+    foreignKey: 'SurveyId',
+    as: 'Survey'
+});
+
+module.exports = {
+    Survey,
+    Question,
+    User,
+    Province,
+    Ward,
+    SurveyAccessRule,
+    Result,
+    UserSurveyStatus
+};

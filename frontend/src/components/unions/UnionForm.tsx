@@ -21,25 +21,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-
-// Define the Cooperative interface (matching CooperativeTable)
-interface Cooperative {
-    Id: number;
-    Username: string;
-    OrganizationName: string;
-    Name: string;
-    Role: "HTX" | "QTD";
-    Email: string;
-    Type: "NN" | "PNN";
-    ProvinceId: number;
-    WardId: number;
-    Address: string;
-    Position: string;
-    NumberCount: number;
-    EstablishedDate: string;
-    Member: "TV" | "KTV";
-    Status: boolean;
-}
+import { User } from "@/types/user";
+import { provinceService, wardService } from "@/lib/api";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // Define the form schema with zod
 const formSchema = z.object({
@@ -55,66 +40,47 @@ const formSchema = z.object({
     role: z.enum(["HTX", "QTD"]),
     email: z.string().email("Email không hợp lệ").max(100),
     type: z.enum(["NN", "PNN"]),
-    provinceId: z.number().int().positive("Vui lòng chọn tỉnh"),
     wardId: z.number().int().positive("Vui lòng chọn xã"),
     address: z.string().min(1, "Địa chỉ là bắt buộc").max(255),
     position: z.string().min(1, "Chức vụ là bắt buộc").max(100),
-    numberCount: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
+    memberCount: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
     establishedDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
         message: "Ngày thành lập không hợp lệ",
     }),
-    member: z.enum(["TV", "KTV"]),
+    isMember: z.boolean(),
     status: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Define props for CooperativeForm
-interface CooperativeFormProps {
-    initialData?: Cooperative;
+// Define props for UnionForm
+interface UnionFormProps {
+    user?: User;
     onSubmit: (data: FormValues) => Promise<void>;
     onCancel: () => void;
 }
 
-// Mock API to fetch provinces and wards
-async function fetchProvinces() {
-    return [
-        { id: 1, name: "Hà Nội" },
-        { id: 2, name: "TP. Hồ Chí Minh" },
-    ];
-}
-
-async function fetchWards(provinceId: number) {
-    return [
-        { id: 1, name: "Xã A", provinceId: 1 },
-        { id: 2, name: "Xã B", provinceId: 1 },
-        { id: 3, name: "Xã C", provinceId: 2 },
-    ];
-}
-
-export function CooperativeForm({ initialData, onSubmit, onCancel }: CooperativeFormProps) {
-    const [provinces, setProvinces] = useState<{ id: number; name: string }[]>([]);
-    const [wards, setWards] = useState<{ id: number; name: string }[]>([]);
+export function UnionForm({ user, onSubmit, onCancel }: UnionFormProps) {
+    const [wards, setWards] = useState<{ Id: number; Name: string }[]>([]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: initialData
+        defaultValues: user
             ? {
-                username: initialData.Username,
-                organizationName: initialData.OrganizationName,
-                name: initialData.Name,
-                password: "", // Password is not populated for editing
-                role: initialData.Role,
-                email: initialData.Email,
-                type: initialData.Type,
-                provinceId: initialData.ProvinceId,
-                wardId: initialData.WardId,
-                address: initialData.Address,
-                position: initialData.Position,
-                numberCount: initialData.NumberCount,
-                establishedDate: initialData.EstablishedDate.split("T")[0], // Format date for input
-                member: initialData.Member,
-                status: initialData.Status,
+                username: user.Username,
+                organizationName: user.OrganizationName || "",
+                name: user.Name || "",
+                password: "",
+                role: user.Role as "HTX" | "QTD",
+                email: user.Email,
+                type: user.Type as "NN" | "PNN",
+                wardId: user.WardId || 0,
+                address: user.Address || "",
+                position: user.Position || "",
+                memberCount: user.MemberCount || 1,
+                establishedDate: user.EstablishedDate ? user.EstablishedDate.split("T")[0] : "",
+                isMember: user.IsMember,
+                status: user.Status || false,
             }
             : {
                 username: "",
@@ -124,37 +90,29 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
                 role: "HTX",
                 email: "",
                 type: "NN",
-                provinceId: 0,
                 wardId: 0,
                 address: "",
                 position: "",
-                numberCount: 1,
+                memberCount: 1,
                 establishedDate: "",
-                member: "TV",
+                isMember: false,
                 status: true,
             },
     });
 
-    // Fetch provinces when component mounts
+    // Fetch wards when component mounts
     useEffect(() => {
-        fetchProvinces().then(setProvinces);
-    }, []);
-
-    // Fetch wards when provinceId changes
-    useEffect(() => {
-        const provinceId = form.watch("provinceId");
-        if (provinceId) {
-            fetchWards(provinceId).then((wards) =>
-                setWards(wards.filter((ward) => ward.provinceId === provinceId))
-            );
-            // Reset wardId if province changes
-            if (form.getValues("provinceId") !== initialData?.ProvinceId) {
-                form.setValue("wardId", 0);
-            }
+        if (user?.ProvinceId) {
+            wardService.getWardsByProvinceId(user.ProvinceId)
+                .then(response => {
+                    setWards(response.items);
+                })
+                .catch(error => {
+                    console.error("Error fetching wards:", error);
+                });
         }
-    }, [form.watch("provinceId"), initialData]);
+    }, [user?.ProvinceId]);
 
-    // Handle form submission
     function handleSubmit(values: FormValues) {
         onSubmit(values);
     }
@@ -162,7 +120,7 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
     return (
         <div>
             <h1 className="text-xl font-bold mb-4">
-                {initialData ? "Sửa Hợp tác xã/Quỹ tín dụng" : "Tạo Hợp tác xã/Quỹ tín dụng"}
+                {user ? "Sửa Hợp tác xã/Quỹ tín dụng" : "Tạo Hợp tác xã/Quỹ tín dụng"}
             </h1>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -209,7 +167,7 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
                             )}
                         />
 
-                        {!initialData && (
+                        {!user && (
                             <FormField
                                 control={form.control}
                                 name="password"
@@ -289,37 +247,6 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
 
                         <FormField
                             control={form.control}
-                            name="provinceId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Tỉnh</FormLabel>
-                                    <Select
-                                        onValueChange={(value) => field.onChange(Number(value))}
-                                        defaultValue={field.value.toString()}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Chọn tỉnh" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {provinces.map((province) => (
-                                                <SelectItem
-                                                    key={province.id}
-                                                    value={province.id.toString()}
-                                                >
-                                                    {province.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
                             name="wardId"
                             render={({ field }) => (
                                 <FormItem>
@@ -337,10 +264,10 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
                                         <SelectContent>
                                             {wards.map((ward) => (
                                                 <SelectItem
-                                                    key={ward.id}
-                                                    value={ward.id.toString()}
+                                                    key={ward.Id}
+                                                    value={ward.Id.toString()}
                                                 >
-                                                    {ward.name}
+                                                    {ward.Name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -380,7 +307,7 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
 
                         <FormField
                             control={form.control}
-                            name="numberCount"
+                            name="memberCount"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Số lượng</FormLabel>
@@ -413,21 +340,17 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
 
                         <FormField
                             control={form.control}
-                            name="member"
+                            name="isMember"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Loại thành viên</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Chọn loại thành viên" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="TV">Thành viên</SelectItem>
-                                            <SelectItem value="KTV">Không thành viên</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <FormLabel>Là thành viên</FormLabel>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                        <Label>{field.value ? "Có" : "Không"}</Label>
+                                    </div>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -460,7 +383,7 @@ export function CooperativeForm({ initialData, onSubmit, onCancel }: Cooperative
                     </div>
 
                     <div className="flex justify-end mt-6 space-x-2">
-                        <Button type="submit">{initialData ? "Cập nhật" : "Tạo"}</Button>
+                        <Button type="submit">{user ? "Cập nhật" : "Tạo"}</Button>
                         <Button type="button" variant="outline" onClick={onCancel}>
                             Hủy
                         </Button>

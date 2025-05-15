@@ -41,7 +41,7 @@ interface User {
     Username: string;
     Name: string | null;
     Email: string;
-    Role: "LMHTX" | "QTD" | "HTX" | "admin";
+    Role: "LMHTX" | "QTD" | "HTX" | "admin" | "UBKT";
     Status: boolean | null;
     IsLocked: boolean | null;
     OrganizationName?: string | null;
@@ -50,9 +50,9 @@ interface User {
     WardId?: number | null;
     Address?: string | null;
     Position?: string | null;
-    NumberCount?: number | null;
+    MemberCount?: number | null;
     EstablishedDate?: string | null;
-    Member?: string | null;
+    IsMember?: boolean | null;
     SurveyStatus?: boolean | null;
     SurveyTime?: number | null;
     Province?: { Name: string } | null;

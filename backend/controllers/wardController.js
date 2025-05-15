@@ -62,10 +62,9 @@ exports.getParentList = async (req, res) => {
 };
 
 exports.insertWard = async (req, res) => {
-    const { Name, ProvinceId } = req.body;
+  const { Name, ProvinceId } = req.body;
 
   try {
-    // Kiểm tra trùng
     const existing = await Ward.findOne({
       where: {
         Name: sequelize.where(
@@ -92,7 +91,6 @@ exports.updateWard = async (req, res) => {
   const { Id, Name, ProvinceId } = req.body;
 
   try {
-    // Kiểm tra trùng
     const existing = await Ward.findOne({
       where: {
         Name: sequelize.where(

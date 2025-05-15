@@ -1,12 +1,13 @@
 // lib/api.ts
 import axios from "axios";
-import { Province, Ward } from "@/types/user";
-
-import { profile } from "console"
+import { Province, UserResponse, Ward } from "@/types/user";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 const initialPage = 1
 const initialLimit = 10
+const initialSearch = ""
+const initialSortColumn = "Username"
+const initialSortDirection = "ASC"
 
 export const API = {
     surveys: `${BASE_URL}/surveys`,
@@ -81,13 +82,36 @@ export const surveyService = {
 };
 
 export const userService = {
-    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = "", sortColumn: string = "Username", sortDirection: string = "ASC") => {
-        const response = await axios.get(`${BASE_URL}/users?page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
+        let url = `${BASE_URL}/users?page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
+        
+        // Add filter parameters if provided
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    url += `&${key}=${encodeURIComponent(value)}`;
+                }
+            });
+        }
+        
+        const response = await axios.get(url);
         return response.data;
     },
 
-    getUsersByRoleAndProvince: async (role: string, provinceId: number) => {
-        const response = await axios.get(`${BASE_URL}/users/role-province?role=${role}&provinceId=${provinceId}`);
+    getUsersByProvince: async (provinceId: number, page: number = initialPage, limit: number = initialLimit,
+        search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
+        let url = `${BASE_URL}/users/province?provinceId=${provinceId}&page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
+        
+        // Add filter parameters if provided
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    url += `&${key}=${encodeURIComponent(value)}`;
+                }
+            });
+        }
+        
+        const response = await axios.get(url);
         return response.data;
     },
 

@@ -50,7 +50,6 @@ export default function LoginPage() {
 
         toast.success("Đăng nhập thành công");
 
-        // Redirect based on role
         if (data.user.Role === 'admin') {
           router.push("/admin");
         } else if (data.user.Role === 'LMHTX') {

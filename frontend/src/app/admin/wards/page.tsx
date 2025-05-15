@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+
 type Info = {
     Id: number
     ProvinceId: number
@@ -38,7 +39,7 @@ type ValuePair = {
 }
 
 
-export default function InfoTablePage() {
+function InfoTable() {
     // #region Biến
     const [isImporting, setIsImporting] = useState(false);
     const [selectAll, setSelectAll] = useState(false);
@@ -98,7 +99,7 @@ export default function InfoTablePage() {
                 }
 
                 console.log("Submitted successfully", editFormData);
-                setEditFormData({Id: -1, ProvinceId: -1, Name: ""})
+                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" })
                 setEditMode(false)
                 fetchInfo(currentPage);
             } catch (error) {
@@ -126,7 +127,7 @@ export default function InfoTablePage() {
                 }
 
                 console.log("Submitted successfully", infoFormData);
-                setInfoFormData({ ProvinceId: -1, Name: ""})
+                setInfoFormData({ ProvinceId: -1, Name: "" })
                 fetchInfo(currentPage);
             } catch (error) {
                 console.error("Error submitting form:", error);
@@ -150,7 +151,7 @@ export default function InfoTablePage() {
     };
     // #endregion
     // #region Del
-    const handleDelClick = async (data: {Id: number}) => {
+    const handleDelClick = async (data: { Id: number }) => {
         const isConfirmed = window.confirm('Bạn có chắc chắn muốn xóa không?');
         if (isConfirmed) {
             try {
@@ -191,26 +192,26 @@ export default function InfoTablePage() {
     const handleDeleteMultiple = async () => {
         const isConfirmed = window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} mục?`);
         if (!isConfirmed) return;
-      
+
         try {
-            const res = await fetch(`${API.wards    }`, {
+            const res = await fetch(`${API.wards}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ ids: selectedIds }),
             });
-      
-          if (!res.ok) {
-            const errText = await res.text();
-            alert("Lỗi: " + errText);
-            return;
-          }
-          setSelectedIds([]);
-          fetchInfo(currentPage);
-          setSelectAll(false);
+
+            if (!res.ok) {
+                const errText = await res.text();
+                alert("Lỗi: " + errText);
+                return;
+            }
+            setSelectedIds([]);
+            fetchInfo(currentPage);
+            setSelectAll(false);
         } catch (error) {
-          console.error("Error deleting multiple:", error);
+            console.error("Error deleting multiple:", error);
         }
     };
     // #endregion
@@ -218,15 +219,15 @@ export default function InfoTablePage() {
     const handleImport = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsImporting(true); // Bắt đầu loading
-    
+
         const formData = new FormData(e.currentTarget);
-    
+
         try {
             const res = await fetch(`${API.wards}/import`, {
                 method: 'POST',
                 body: formData,
             });
-    
+
             const text = await res.text();
             alert(text);
             fetchInfo(currentPage);
@@ -257,164 +258,174 @@ export default function InfoTablePage() {
     }, [currentPage])
 
     return (
-        <main className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-            <Card className="w-full max-w-3xl">
-                <CardContent className="p-6 space-y-4">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-semibold">Quản lý Phường/Xã</h2>
-                        <Dialog open={infoDialogOpen} onOpenChange={(isOpen) => {
-                            setInfoDialogOpen(isOpen)
-                            if (!isOpen) {
-                                setEditMode(false) // Đặt lại chế độ về thêm mới
-                                setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
-                                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
-                                setOldName("") // Đặt lại tên cũ
-                            }
-                        }}>
-                            <Button 
-                                variant="destructive" 
-                                disabled={selectedIds.length === 0}
-                                onClick={handleDeleteMultiple}
-                                >
-                                Xóa {selectedIds.length} mục
-                            </Button>
+        <Card className="w-full max-w-3xl">
+            <CardContent className="p-6 space-y-4">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold">Quản lý Phường/Xã</h2>
+                    <Dialog open={infoDialogOpen} onOpenChange={(isOpen) => {
+                        setInfoDialogOpen(isOpen)
+                        if (!isOpen) {
+                            setEditMode(false) // Đặt lại chế độ về thêm mới
+                            setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                            setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                            setOldName("") // Đặt lại tên cũ
+                        }
+                    }}>
+                        <Button
+                            variant="destructive"
+                            disabled={selectedIds.length === 0}
+                            onClick={handleDeleteMultiple}
+                        >
+                            Xóa {selectedIds.length} mục
+                        </Button>
 
-                            <DialogTrigger asChild>
-                                <Button>Thêm Phường/Xã</Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[500px]">
-                                <DialogHeader>
-                                    <DialogTitle>{editMode ? "Sửa Phường/Xã" : "Thêm Phường/Xã"}</DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={handleInfoSubmit} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="ProvinceId">Tỉnh/Thành phố</Label>
-                                        <Select
-                                            name="ProvinceId"
-                                            value={editMode ? String(editFormData.ProvinceId) : (infoFormData.ProvinceId === -1 ? "" : String(infoFormData.ProvinceId))}
-                                            onValueChange={(value) => commboBoxChange(value)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {valuePairList.map((item) => (
-                                                    <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="Name">Tên Phường/Xã</Label>
-                                        <Input
-                                            id="Name"
-                                            name="Name"
-                                            value={editMode ? editFormData.Name : infoFormData.Name}
-                                            onChange={handleInfoChange}
-                                            required
-                                            placeholder="Nhập tên Phường/Xã"
-                                        />
-                                    </div>
-                                    <div className="flex justify-end gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => {
-                                                setInfoDialogOpen(false)
-                                                setEditMode(false) // Đặt lại chế độ về thêm mới
-                                                setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
-                                                setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
-                                                setOldName("") // Đặt lại tên cũ
-                                            }}
-                                        >
-                                            Hủy
-                                        </Button>
-                                        <Button type="submit">{editMode ? "Cập nhật" : "Thêm Phường/Xã"}</Button>
-                                    </div>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        <DialogTrigger asChild>
+                            <Button>Thêm Phường/Xã</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                                <DialogTitle>{editMode ? "Sửa Phường/Xã" : "Thêm Phường/Xã"}</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleInfoSubmit} className="space-y-4">
+                                <div>
+                                    <Label htmlFor="ProvinceId">Tỉnh/Thành phố</Label>
+                                    <Select
+                                        name="ProvinceId"
+                                        value={editMode ? String(editFormData.ProvinceId) : (infoFormData.ProvinceId === -1 ? "" : String(infoFormData.ProvinceId))}
+                                        onValueChange={(value) => commboBoxChange(value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {valuePairList.map((item) => (
+                                                <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="Name">Tên Phường/Xã</Label>
+                                    <Input
+                                        id="Name"
+                                        name="Name"
+                                        value={editMode ? editFormData.Name : infoFormData.Name}
+                                        onChange={handleInfoChange}
+                                        required
+                                        placeholder="Nhập tên Phường/Xã"
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setInfoDialogOpen(false)
+                                            setEditMode(false) // Đặt lại chế độ về thêm mới
+                                            setInfoFormData({ ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                                            setEditFormData({ Id: -1, ProvinceId: -1, Name: "" }) // Đặt lại giá trị form
+                                            setOldName("") // Đặt lại tên cũ
+                                        }}
+                                    >
+                                        Hủy
+                                    </Button>
+                                    <Button type="submit">{editMode ? "Cập nhật" : "Thêm Phường/Xã"}</Button>
+                                </div>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+                <div className="overflow-x-auto">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Input
+                            placeholder="Tìm kiếm..."
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            className="w-1/3"
+                        />
+                        <Button onClick={() => fetchInfo(1)}>Tìm kiếm</Button>
                     </div>
-                    <div className="overflow-x-auto">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Input 
-                                placeholder="Tìm kiếm..."
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
-                                className="w-1/3"
-                            />
-                            <Button onClick={() => fetchInfo(1)}>Tìm kiếm</Button>
-                        </div>
 
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[60px] text-center">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[60px] text-center">
                                     <input
                                         type="checkbox"
                                         className="w-5 h-5"
                                         checked={selectAll}
                                         onChange={handleSelectAllChange}
+                                        aria-label="Chọn tất cả"
                                     />
-                                    </TableHead>
-                                    <TableHead className="w-[120px]">Hành động</TableHead>
-                                    <TableHead className="w-[300px]">Tên Phường/Xã</TableHead>
-                                    <TableHead className="w-[200px]">Thuộc Tỉnh/TP</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {infoList.map((item) => (
-                                    <TableRow key={item.Id}>
-                                        <TableCell>
-                                            <input
+                                </TableHead>
+                                <TableHead className="w-[120px]">Hành động</TableHead>
+                                <TableHead className="w-[300px]">Tên Phường/Xã</TableHead>
+                                <TableHead className="w-[200px]">Thuộc Tỉnh/TP</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {infoList.map((item) => (
+                                <TableRow key={item.Id}>
+                                    <TableCell>
+                                        <input
                                             type="checkbox"
                                             className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                             checked={selectedIds.includes(item.Id)}
                                             onChange={() => handleCheckboxChange(item.Id)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, ProvinceId: item.ProvinceId, Name: item.Name })}>
-                                                    <Pencil className="w-4 h-4 mr-1" /> Sửa
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() => handleDelClick({ Id: item.Id })}
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-1" /> Xóa
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{item.Name}</TableCell>
-                                        <TableCell>{valuePairList.find(i => i.Id === item.ProvinceId)?.Name}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <label>{totalPages} bản ghi</label>
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={Math.ceil(totalPages / Config.limit)}
-                        onPageChange={(page) => setCurrentPage(page)}
-                    />
-                    <div className="overflow-x-auto space-y-2">
-                        <Button onClick={() => window.open(`${API.wards}/export`, "_blank")}>
-                            Xuất Excel
-                        </Button>
+                                            aria-label={`Chọn ${item.Name}`}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => handleEditClick({ Id: item.Id, ProvinceId: item.ProvinceId, Name: item.Name })}>
+                                                <Pencil className="w-4 h-4 mr-1" /> Sửa
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleDelClick({ Id: item.Id })}
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-1" /> Xóa
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{item.Name}</TableCell>
+                                    <TableCell>{valuePairList.find(i => i.Id === item.ProvinceId)?.Name}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <label>{totalPages} bản ghi</label>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(totalPages / Config.limit)}
+                    onPageChange={(page) => setCurrentPage(page)}
+                />
+                <div className="overflow-x-auto space-y-2">
+                    <Button onClick={() => window.open(`${API.wards}/export`, "_blank")}>
+                        Xuất Excel
+                    </Button>
 
-                        <form onSubmit={handleImport} className="flex items-center gap-2">
-                            <Input type="file" name="file" accept=".xlsx" required disabled={isImporting} />
-                            <Button type="submit" disabled={isImporting}>
-                                {isImporting ? "Đang import..." : "Import Excel"}
-                            </Button>
-                            {isImporting && <span className="text-blue-500 text-sm animate-pulse">Đang xử lý...</span>}
-                        </form>
-                    </div>
-                </CardContent>
-            </Card>
-        </main>
+                    <form onSubmit={handleImport} className="flex items-center gap-2">
+                        <Input type="file" name="file" accept=".xlsx" required disabled={isImporting} />
+                        <Button type="submit" disabled={isImporting}>
+                            {isImporting ? "Đang import..." : "Import Excel"}
+                        </Button>
+                        {isImporting && <span className="text-blue-500 text-sm animate-pulse">Đang xử lý...</span>}
+                    </form>
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
+export default function InfoTablePage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <main className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+                <InfoTable />
+            </main>
+        </Suspense>
     )
 }
