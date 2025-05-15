@@ -7,9 +7,9 @@ const router = express.Router();
 const wardController = require("../controllers/wardController");
 
 router.get('/', wardController.getAllWards);
+router.get('/parent_list', wardController.getParentList);
 router.get('/:id', wardController.getWardById);
 router.get('/province/:id', wardController.getWardsByProvinceId);
-router.get('/parent_list', wardController.getParentList);
 router.get('/export', wardController.exportWards);
 
 router.post('/', wardController.insertWard);

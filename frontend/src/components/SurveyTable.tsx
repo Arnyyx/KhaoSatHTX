@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { RuleTableDialog } from "@/components/SurveyAccessRule/RuleTableDialog"
 import {
     Table,
     TableBody,
@@ -33,9 +34,15 @@ interface Survey {
     EndTime: string;
     Status: boolean;
 }
-
+interface SurveyAccessRule {
+    Id: number;
+    SurveyId: number;
+    Role: string;
+    Type: string;
+}
 export function SurveyTable() {
     const [surveys, setSurveys] = useState<Survey[]>([]);
+    const [accessRule, setAccessRule] = useState<SurveyAccessRule[]>([]);
     const [pagination, setPagination] = useState<any>({});
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
@@ -44,7 +51,6 @@ export function SurveyTable() {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [editingSurvey, setEditingSurvey] = useState<Survey | null>(null);
-
     const fetchSurveys = async (searchQuery: string = "") => {
         try {
             const data = await surveyService.getSurveysByPage(page, 10, searchQuery);
@@ -238,6 +244,7 @@ export function SurveyTable() {
                                 <ArrowUpDown className="h-4 w-4" />
                             </Button>
                         </TableHead>
+                        <TableHead>Phân quyền</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -279,6 +286,9 @@ export function SurveyTable() {
                                         >
                                             {survey.Status ? "Active" : "Inactive"}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                        <RuleTableDialog SurveyId={survey.Id}></RuleTableDialog>
                                     </TableCell>
                                     <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

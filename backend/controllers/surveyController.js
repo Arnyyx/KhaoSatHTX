@@ -10,11 +10,12 @@ exports.getSurveysProgress = async (req, res) => {
     try {
         const survey = await sequelize.query(`
             SELECT *, 
-            (select count(Users.Id) from Users, SurveyAccessRules
+            (select count(Users.Id) from Users, SurveyAccessRules, UserSurveyStatus
             Where Users.Role = SurveyAccessRules.Role
             AND Users.Type = SurveyAccessRules.Type
-            AND SurveyId = Surveys.Id
-            AND SurveyStatus = 1) as finishedNum,
+			AND Users.Id = UserSurveyStatus.UserId
+            AND SurveyAccessRules.SurveyId = Surveys.Id
+            AND FinishedTime is not null) as finishedNum,
             (select count(Users.Id) from Users, SurveyAccessRules
             Where Users.Role = SurveyAccessRules.Role
             AND Users.Type = SurveyAccessRules.Type
@@ -33,8 +34,87 @@ exports.getSurveysProgress = async (req, res) => {
     }
 }
 
-exports.getSurveysByRoleNType = async (req, res) => { 
+exports.getSurveysByRole = async (req, res) => { 
+    try {
+        const { role, type } = req.query
+        const surveys = await Survey.findAll({
+            include: [
+                {
+                    model: SurveyAccessRule,
+                    as: "SurveyAccessRules",
+                    where: {
+                        Role: role,
+                        Type: type,
+                    },
+                    attributes: ['Role', 'Type'],
+                    required: true, // tương đương với INNER JOIN
+                },
+            ],
+        });
+        if (surveys) {
+            res.status(200).json({ message: "Lấy survey thành công", surveys });
+        } else {
+            res.status(404).json({ message: "Không tìm thấy survey" });
+        }
+    } catch (error) {
+        console.error("Error in getSurveysByRole:", error);
+        res.status(400).json({ message: "Lỗi khi lấy survey", error: error.message });
+    }
+}
 
+exports.getSurveyAccessRules = async (req, res) => {
+    try {
+        const surveysRule = await SurveyAccessRule.findAll();
+        res.status(200).json(surveysRule);
+    } catch (err) {
+        res.status(400).json({ message: "Lỗi", error: err.message });
+    }
+}
+exports.getSurveyAccessRulesBySurvey = async (req, res) => {
+    try {
+        const {survey_id} = req.params
+        const surveysRule = await SurveyAccessRule.findAll({
+            where: {
+                SurveyId: survey_id,
+            }
+        });
+        res.status(200).json(surveysRule);
+    } catch (err) {
+        res.status(400).json({ message: "Lỗi", error: err.message });
+    }
+}
+exports.insertSurveyAccessRules = async (req, res) => {
+    try {
+        const {SurveyId, Role, Type} = req.body
+        const surveyRule = SurveyAccessRule.create({SurveyId, Role, Type})
+        res.json(surveyRule);
+    } catch (err) {
+        res.status(400).json({ message: "Lỗi", error: err.message });
+    }
+}
+exports.updateSurveyAccessRules = async (req, res) => {
+    try {
+        const {Id, SurveyId, Role, Type} = req.body
+        const surveyRule = SurveyAccessRule.update({SurveyId,Role,Type}, { where: { Id } })
+        res.json(surveyRule);
+    } catch (err) {
+        res.status(400).json({ message: "Lỗi", error: err.message });
+    }
+}
+exports.deleteSurveyAccessRules = async (req, res) => {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).send('No IDs provided');
+    }
+
+    try {
+        await SurveyAccessRule.destroy({ where: { Id: { [Op.in]: ids } } });
+        res.send('Deleted successfully');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Database error');
+    }
 }
 
 exports.getSurveysById = async (req, res) => { 

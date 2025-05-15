@@ -135,6 +135,21 @@ exports.deleteProvince = async (req, res) => {
         res.status(500).send('Database error');
     }
 };
+// exports.getProvincesPoint = async (req, res) => {
+//     try {
+//         const provinces = await sequelize.query(`
+//             SELECT Id, Name, Region, 
+//             (SELECT AVG(Point) FROM Users WHERE ProvinceId = Provinces.Id) as Point
+//             FROM Provinces
+//           `, { type: sequelize.QueryTypes.SELECT });
+//         if(provinces) {
+//             res.status(200).json(provinces)
+//         }
+//         else {
+//             res.status(400).json({message:'Không tìm thấy Tỉnh'})
+//         }
+//     }
+// }
 exports.exportProvinces = async (req, res) => {
     try {
         const provinces = await Province.findAll({

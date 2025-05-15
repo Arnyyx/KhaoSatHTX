@@ -86,8 +86,8 @@ export default function DashboardPage() {
     const [allDistricts, setAllWard] = useState<WardInfo[]>([]);
     const [usersList, setUsersList] = useState<User[]>([])
     
-    const visibleProvinces = showProvincesAll ? provincesFilter : provincesFilter.slice(0, 10);
-    const visibleUsers = showUsersAll ? usersList : usersList.slice(0, 10); 
+    const visibleProvinces = showProvincesAll ? provincesFilter : provincesFilter.slice(0, 3);
+    const visibleUsers = showUsersAll ? usersList : usersList.slice(0, 3); 
     const [allUsersList, setAllUsersList] = useState<User[]>([])
     // const [participatedHTX, setParticipatedHTX] = useState(0)
     const [totalHTX, setTotalHTX] = useState(0)
@@ -165,8 +165,8 @@ export default function DashboardPage() {
             
             const userRes = await fetch(`${API.users}`)
             const userData = await userRes.json();
-            setUsersList(userData);
-            setAllUsersList(userData);
+            setUsersList(userData.items);
+            setAllUsersList(userData.items);
             // const participatedCount = userData.filter((user: User) => user.SurveyStatus).length;
             // const totalCount = userData.length;
             // setParticipatedHTX(participatedCount);
@@ -178,7 +178,8 @@ export default function DashboardPage() {
 
             const res2 = await fetch(`${API.wards}`)
             const data2 = await res2.json()
-            setAllWard(data2)
+            console.log("Ward data:", data2)
+            setAllWard(data2.items)
         } catch (error) {
             console.error("Error fetching data:", error);
         }
@@ -218,8 +219,29 @@ export default function DashboardPage() {
                                 <CardHeader><b>{item.Title}</b></CardHeader>
                                 <CardContent>
                                     <div>Mô tả: {item.Description}</div>
-                                    <div>Bắt đầu: {item.StartTime} - Kết thúc: {item.EndTime}</div>
+                                    <div>Bắt đầu: {new Date(item.StartTime).toLocaleString()} - Kết thúc: {new Date(item.EndTime).toLocaleString()}</div>
                                     <div>Tiến độ: {item.finishedNum}/{item.totalNum}</div>
+                                    <ResponsiveContainer width='100%' height={150}>
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: "Đã tham gia", value: item.finishedNum },
+                                                    { name: "Chưa tham gia", value: item.totalNum - item.finishedNum },
+                                                ]}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                cx="50%"
+                                                cy="50%"
+                                                outerRadius={50}
+                                                fill="#8884d8"
+                                                label={renderCustomLabel}
+                                            >
+                                                <Cell fill="#34d399" />
+                                                <Cell fill="#52525b" />
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
                                 </CardContent>
                             </Card>
                         ))}

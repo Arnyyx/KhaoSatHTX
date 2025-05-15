@@ -27,6 +27,11 @@ export const surveyService = {
         return response.data;
     },
 
+    getAccessRules: async (surveyId: number) => {
+        const response = await axios.get(`${BASE_URL}/surveys/access_rule/${surveyId}`);
+        return response.data;
+    },
+
     getSurveys: async () => {
         const response = await axios.get(`${BASE_URL}/surveys`);
         return response.data;
