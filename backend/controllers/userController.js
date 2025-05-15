@@ -558,11 +558,70 @@ exports.exportUsers = async (req, res) => {
     }
 };
 
+exports.checkUsername = async (req, res) => {
+    try {
+        const { username } = req.query;
+        
+        if (!username) {
+            return res.status(400).json({ 
+                message: "Username is required", 
+                exists: false 
+            });
+        }
+        
+        const user = await User.findOne({
+            where: { Username: username }
+        });
+        
+        return res.status(200).json({
+            exists: !!user
+        });
+    } catch (error) {
+        console.error("Error checking username:", error);
+        return res.status(500).json({
+            message: "Error checking username",
+            error: error.message,
+            exists: false
+        });
+    }
+};
 
 exports.importUsers = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: "Vui lòng tải lên file Excel" });
+        }
+
+        // Get the current user's ID from cookies or authorization header
+        let currentUserId;
+        
+        // Try to get from cookie first
+        if (req.cookies && req.cookies.ID_user) {
+            currentUserId = req.cookies.ID_user;
+        } 
+        // If not in cookie, try authorization header
+        else if (req.headers.authorization) {
+            const token = req.headers.authorization.split(' ')[1];
+            try {
+                const decoded = jwt.verify(token, process.env.SECRET_KEY);
+                currentUserId = decoded.id;
+            } catch (err) {
+                console.error("Token verification failed:", err);
+                return res.status(401).json({ message: "Token không hợp lệ" });
+            }
+        } 
+        // If userId is in the request body (from frontend)
+        else if (req.body.userId) {
+            currentUserId = req.body.userId;
+        }
+        else {
+            return res.status(401).json({ message: "Không thể xác định người dùng" });
+        }
+
+        // Get user details to get ProvinceId
+        const currentUser = await User.findByPk(currentUserId);
+        if (!currentUser || !currentUser.ProvinceId) {
+            return res.status(400).json({ message: "Người dùng không hợp lệ hoặc không có ProvinceId" });
         }
 
         const workbook = XLSX.readFile(req.file.path);
@@ -592,7 +651,10 @@ exports.importUsers = async (req, res) => {
             return user;
         });
 
-        const job = await userQueue.add({ usersData });
+        const job = await userQueue.add({ 
+            usersData,
+            currentUserProvinceId: currentUser.ProvinceId 
+        });
 
         res.status(202).json({
             message: "Đang xử lý file Excel, bạn sẽ nhận kết quả sau",
@@ -610,9 +672,10 @@ exports.importUsers = async (req, res) => {
 
 userQueue.process(async (job) => {
     console.time(`Job ${job.id}`);
-    const { usersData } = job.data;
+    const { usersData, currentUserProvinceId } = job.data;
     const errors = [];
     const createdUsers = [];
+    const duplicateUsernames = [];
     const BATCH_SIZE = 20;
 
     const provinces = await Province.findAll({ attributes: ["Id", "Name"] });
@@ -620,18 +683,40 @@ userQueue.process(async (job) => {
     const provinceMap = new Map(provinces.map((p) => [p.Name, p.Id]));
     const wardMap = new Map(wards.map((w) => [w.Name, w.Id]));
 
+    // Pre-check all usernames to find duplicates
+    const usernames = usersData.map(row => row.Username);
+    const existingUsers = await User.findAll({
+        where: {
+            Username: usernames
+        },
+        attributes: ['Username']
+    });
+    
+    const existingUsernames = new Set(existingUsers.map(user => user.Username));
+
     for (let i = 0; i < usersData.length; i += BATCH_SIZE) {
         const batch = usersData.slice(i, i + BATCH_SIZE);
 
         await sequelize.transaction(async (t) => {
             for (const row of batch) {
                 try {
+                    // Check if username already exists
+                    if (existingUsernames.has(row.Username)) {
+                        errors.push({ 
+                            row, 
+                            errors: [`Username "${row.Username}" đã tồn tại trong hệ thống`] 
+                        });
+                        duplicateUsernames.push(row.Username);
+                        continue;
+                    }
+
                     const validationErrors = validateUserData(row);
                     if (validationErrors.length > 0) {
                         errors.push({ row, errors: validationErrors });
                         continue;
                     }
 
+                    // Convert string values to appropriate types
                     const userData = {
                         Username: row.Username,
                         Password: row.Password,
@@ -640,13 +725,14 @@ userQueue.process(async (job) => {
                         Role: row.Role,
                         Email: row.Email,
                         Type: row.Type,
-                        ProvinceId: row.Province ? provinceMap.get(row.Province) : null,
+                        // Use the current user's ProvinceId instead of the one from the file
+                        ProvinceId: currentUserProvinceId,
                         WardId: row.Ward ? wardMap.get(row.Ward) : null,
                         Address: row.Address,
                         Position: row.Position,
                         MemberCount: row.MemberCount ? parseInt(row.MemberCount) : null,
                         EstablishedDate: parseDateFromDDMMYYYY(row.EstablishedDate),
-                        IsMember: row.IsMember,
+                        IsMember: row.IsMember === "true" || row.IsMember === true || row.IsMember === "1" || row.IsMember === 1,
                         Status: row.Status === "true" || row.Status === true,
                         IsLocked: row.IsLocked === "true" || row.IsLocked === true,
                         SurveyStatus: row.SurveyStatus === "true" || row.SurveyStatus === true,
@@ -654,6 +740,8 @@ userQueue.process(async (job) => {
                     };
 
                     const user = await User.create(userData, { transaction: t });
+                    // Add this username to the set to catch duplicates within the same import
+                    existingUsernames.add(row.Username);
                     createdUsers.push(user);
                 } catch (error) {
                     errors.push({ row, error: error.message });
@@ -663,7 +751,11 @@ userQueue.process(async (job) => {
     }
 
     console.timeEnd(`Job ${job.id}`);
-    console.log(`Processed job ${job.id}: ${createdUsers.length} users created, ${errors.length} errors`);
+    console.log(`Processed job ${job.id}: ${createdUsers.length} users created, ${errors.length} errors, ${duplicateUsernames.length} duplicate usernames`);
 
-    return { created: createdUsers.length, errors };
+    return { 
+        created: createdUsers.length, 
+        errors, 
+        duplicateUsernames
+    };
 });

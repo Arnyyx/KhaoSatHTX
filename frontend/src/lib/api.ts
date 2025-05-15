@@ -1,6 +1,7 @@
 // lib/api.ts
 import axios from "axios";
 import { Province, UserResponse, Ward } from "@/types/user";
+import Cookies from "js-cookie";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 const initialPage = 1
@@ -93,6 +94,11 @@ export const userService = {
         return response.data;
     },
 
+    checkUsername: async (username: string): Promise<{ exists: boolean }> => {
+        const response = await axios.get(`${BASE_URL}/users/check-username?username=${encodeURIComponent(username)}`);
+        return response.data;
+    },
+
     getUsersByProvince: async (provinceId: number, page: number = initialPage, limit: number = initialLimit,
         search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
         let url = `${BASE_URL}/users/province?provinceId=${provinceId}&page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
@@ -134,8 +140,26 @@ export const userService = {
         return response.data;
     },
     importUsers: async (file: File) => {
-        const response = await axios.post(`${BASE_URL}/users/import`, { file });
-        return response.data;
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            // Get the current user's ID from cookie
+            const userId = Cookies.get('ID_user');
+            if (userId) {
+                formData.append("userId", userId);
+            }
+            
+            const response = await axios.post(`${BASE_URL}/users/import`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error("API importUsers error:", error.response?.data || error.message);
+            throw error;
+        }
     },
     exportUsers: async (ids: number[]) => {
         const response = await axios.post(

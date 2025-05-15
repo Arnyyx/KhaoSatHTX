@@ -62,7 +62,7 @@ export function UserTable() {
     const [editingUser, setEditingUser] = useState<User | undefined>();
     const [columnVisibility, setColumnVisibility] = useState({});
     const [showFilters, setShowFilters] = useState(false);
-    
+
     // Filter state
     const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
     const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
@@ -70,10 +70,22 @@ export function UserTable() {
     const [provinceFilter, setProvinceFilter] = useState<number | undefined>(undefined);
     const [wardFilter, setWardFilter] = useState<number | undefined>(undefined);
     const [isMemberFilter, setIsMemberFilter] = useState<string | undefined>(undefined);
-    
+
     // Province and Ward data for filters
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [wards, setWards] = useState<Ward[]>([]);
+
+    const handleEditUser = (user: User) => {
+        setEditingUser(user); // Cập nhật editingUser trước
+        setIsEditOpen(true);  // Mở form sau khi cập nhật
+    };
+
+    const handleEditFormClose = (open: boolean) => {
+        setIsEditOpen(open);
+        if (!open) {
+            setEditingUser(undefined); // Đặt lại editingUser khi đóng form
+        }
+    };
 
     // Fetch provinces for filter
     useEffect(() => {
@@ -103,7 +115,7 @@ export function UserTable() {
         try {
             const sortColumn = sorting[0]?.id || 'Username';
             const sortDirection = sorting[0]?.desc ? 'DESC' : 'ASC';
-            
+
             // Construct filter object
             const filters: Record<string, any> = {};
             if (roleFilter && roleFilter !== "all") filters.Role = roleFilter;
@@ -112,12 +124,12 @@ export function UserTable() {
             if (provinceFilter) filters.ProvinceId = provinceFilter;
             if (wardFilter) filters.WardId = wardFilter;
             if (isMemberFilter && isMemberFilter !== "all") filters.IsMember = isMemberFilter === 'true';
-            
+
             const response: UserResponse = await userService.getUsers(
-                page, 
-                limit, 
-                search, 
-                sortColumn, 
+                page,
+                limit,
+                search,
+                sortColumn,
                 sortDirection,
                 filters
             );
@@ -158,17 +170,17 @@ export function UserTable() {
                 if (provinceFilter) filters.ProvinceId = provinceFilter;
                 if (wardFilter) filters.WardId = wardFilter;
                 if (isMemberFilter && isMemberFilter !== "all") filters.IsMember = isMemberFilter === 'true';
-                
+
                 // Fetch all user IDs
                 const response: UserResponse = await userService.getUsers(
-                    1, 
-                    total, 
-                    search, 
-                    sorting[0]?.id || 'Username', 
+                    1,
+                    total,
+                    search,
+                    sorting[0]?.id || 'Username',
                     sorting[0]?.desc ? 'DESC' : 'ASC',
                     filters
                 );
-                
+
                 const allIds = response.items.map((user) => user.Id);
                 setSelectedRows(allIds);
                 setSelectAllPages(true);
@@ -227,10 +239,7 @@ export function UserTable() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                            setEditingUser(row.original);
-                            setIsEditOpen(true);
-                        }}
+                        onClick={() => handleEditUser(row.original)}
                     >
                         Edit
                     </Button>
@@ -375,7 +384,15 @@ export function UserTable() {
             ),
             cell: ({ row }) => {
                 const date = row.original.EstablishedDate;
-                return date ? new Date(date).toLocaleDateString() : '';
+                if (!date) return '';
+
+                const dateObj = new Date(date);
+                // Format as DD/MM/YYYY
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const year = dateObj.getFullYear();
+
+                return `${day}/${month}/${year}`;
             }
         },
         {
@@ -525,7 +542,7 @@ export function UserTable() {
                     </Button>
                 </div>
             </div>
-            
+
             {showFilters && (
                 <Card>
                     <CardContent className="pt-6">
@@ -550,7 +567,7 @@ export function UserTable() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            
+
                             <div>
                                 <label className="text-sm font-medium">Type</label>
                                 <Select
@@ -568,7 +585,7 @@ export function UserTable() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            
+
                             <div>
                                 <label className="text-sm font-medium">Status</label>
                                 <Select
@@ -586,7 +603,7 @@ export function UserTable() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            
+
                             <div>
                                 <label className="text-sm font-medium">Province</label>
                                 <Select
@@ -614,7 +631,7 @@ export function UserTable() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            
+
                             <div>
                                 <label className="text-sm font-medium">Ward</label>
                                 <Select
@@ -642,7 +659,7 @@ export function UserTable() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            
+
                             <div>
                                 <label className="text-sm font-medium">Is Member</label>
                                 <Select
@@ -661,7 +678,7 @@ export function UserTable() {
                                 </Select>
                             </div>
                         </div>
-                        
+
                         <div className="flex justify-end mt-4">
                             <Button variant="outline" onClick={resetFilters}>
                                 Reset Filters
@@ -670,7 +687,7 @@ export function UserTable() {
                     </CardContent>
                 </Card>
             )}
-            
+
             <div className="text-sm">
                 {selectedCount} of {total} row(s) selected
             </div>
@@ -727,7 +744,7 @@ export function UserTable() {
             />
             <UserForm
                 open={isEditOpen}
-                onOpenChange={setIsEditOpen}
+                onOpenChange={handleEditFormClose}
                 user={editingUser}
                 onSuccess={fetchUsers}
             />
