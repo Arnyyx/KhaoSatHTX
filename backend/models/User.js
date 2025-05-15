@@ -29,12 +29,12 @@ const User = sequelize.define(
             type: DataTypes.STRING(20),
             allowNull: false,
             validate: {
-                isIn: [["LMHTX", "QTD", "HTX", "admin"]],
+                isIn: [["LMHTX", "QTD", "HTX", "admin", "UBKT"]],
             },
         },
         Email: {
             type: DataTypes.STRING(100),
-            allowNull: false,
+            allowNull: true,
         },
         Type: {
             type: DataTypes.STRING(10),
@@ -59,7 +59,7 @@ const User = sequelize.define(
             type: DataTypes.STRING(100),
             allowNull: true,
         },
-        NumberCount: {
+        MemberCount: {
             type: DataTypes.INTEGER,
             allowNull: true,
         },
@@ -67,12 +67,9 @@ const User = sequelize.define(
             type: DataTypes.DATEONLY,
             allowNull: true,
         },
-        Member: {
-            type: DataTypes.STRING(10),
+        IsMember: {
+            type: DataTypes.BOOLEAN,
             allowNull: true,
-            validate: {
-                isIn: [["KTV", "TV"]],
-            },
         },
         Status: {
             type: DataTypes.BOOLEAN,
@@ -84,10 +81,6 @@ const User = sequelize.define(
         },
         SurveyStatus: {
             type: DataTypes.BOOLEAN,
-            allowNull: true,
-        },
-        SurveyTime: {
-            type: DataTypes.INTEGER,
             allowNull: true,
         },
     },

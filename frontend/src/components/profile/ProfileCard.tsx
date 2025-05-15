@@ -72,10 +72,12 @@ export function ProfileCard({ user, isAdmin = false }: ProfileCardProps) {
                             value={new Date(user.EstablishedDate).toLocaleDateString('vi-VN')}
                         />
                     )}
-                    {user.NumberCount !== undefined && (
-                        <Info label="Số thành viên" value={user.NumberCount.toString()} />
+                    {user.MemberCount !== undefined && (
+                        <Info label="Số thành viên" value={user.MemberCount.toString()} />
                     )}
-                    {user.Member && <Info label="Loại thành viên" value={user.Member} />}
+                    {user.IsMember !== undefined && (
+                        <Info label="Là thành viên" value={user.IsMember ? "Có" : "Không"} />
+                    )}
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Trạng thái:</span>
                         <Badge variant={user.Status ? "default" : "destructive"}>

@@ -62,7 +62,7 @@ exports.getParentList = async (req, res) => {
 };
 
 exports.insertWard = async (req, res) => {
-    const { Name, ProvinceId } = req.body;
+  const { Name, ProvinceId } = req.body;
 
   try {
     const existing = await Ward.findOne({

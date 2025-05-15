@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import { User } from "@/types/user";
 import { provinceService, wardService } from "@/lib/api";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // Define the form schema with zod
 const formSchema = z.object({
@@ -41,11 +43,11 @@ const formSchema = z.object({
     wardId: z.number().int().positive("Vui lòng chọn xã"),
     address: z.string().min(1, "Địa chỉ là bắt buộc").max(255),
     position: z.string().min(1, "Chức vụ là bắt buộc").max(100),
-    numberCount: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
+    memberCount: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
     establishedDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
         message: "Ngày thành lập không hợp lệ",
     }),
-    member: z.enum(["TV", "KTV"]),
+    isMember: z.boolean(),
     status: z.boolean(),
 });
 
@@ -75,9 +77,9 @@ export function UnionForm({ user, onSubmit, onCancel }: UnionFormProps) {
                 wardId: user.WardId || 0,
                 address: user.Address || "",
                 position: user.Position || "",
-                numberCount: user.NumberCount || 1,
+                memberCount: user.MemberCount || 1,
                 establishedDate: user.EstablishedDate ? user.EstablishedDate.split("T")[0] : "",
-                member: user.Member as "TV" | "KTV",
+                isMember: user.IsMember,
                 status: user.Status || false,
             }
             : {
@@ -91,9 +93,9 @@ export function UnionForm({ user, onSubmit, onCancel }: UnionFormProps) {
                 wardId: 0,
                 address: "",
                 position: "",
-                numberCount: 1,
+                memberCount: 1,
                 establishedDate: "",
-                member: "TV",
+                isMember: false,
                 status: true,
             },
     });
@@ -305,7 +307,7 @@ export function UnionForm({ user, onSubmit, onCancel }: UnionFormProps) {
 
                         <FormField
                             control={form.control}
-                            name="numberCount"
+                            name="memberCount"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Số lượng</FormLabel>
@@ -338,21 +340,17 @@ export function UnionForm({ user, onSubmit, onCancel }: UnionFormProps) {
 
                         <FormField
                             control={form.control}
-                            name="member"
+                            name="isMember"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Loại thành viên</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Chọn loại thành viên" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="TV">Thành viên</SelectItem>
-                                            <SelectItem value="KTV">Không thành viên</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <FormLabel>Là thành viên</FormLabel>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                        <Label>{field.value ? "Có" : "Không"}</Label>
+                                    </div>
                                     <FormMessage />
                                 </FormItem>
                             )}

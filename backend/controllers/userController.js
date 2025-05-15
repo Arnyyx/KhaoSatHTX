@@ -15,30 +15,60 @@ const jwt = require('jsonwebtoken');
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const { page, limit, search, sortColumn, sortDirection } = req.query;
+        const { page, limit, search, sortColumn, sortDirection, Role, Type, Status, ProvinceId, WardId, IsMember } = req.query;
+
+        // Build the where clause
+        let whereClause = {};
+
+        // Add search condition if provided
+        if (search) {
+            whereClause[Op.or] = [
+                { Username: { [Op.like]: `%${search}%` } },
+                { Name: { [Op.like]: `%${search}%` } },
+                { Email: { [Op.like]: `%${search}%` } },
+                { OrganizationName: { [Op.like]: `%${search}%` } },
+                { Address: { [Op.like]: `%${search}%` } },
+                { Position: { [Op.like]: `%${search}%` } },
+                { MemberCount: { [Op.like]: `%${search}%` } },
+                { EstablishedDate: { [Op.like]: `%${search}%` } },
+                { IsMember: { [Op.like]: `%${search}%` } },
+                { Status: { [Op.like]: `%${search}%` } },
+                { '$Province.Name$': { [Op.like]: `%${search}%` } },
+                { '$Ward.Name$': { [Op.like]: `%${search}%` } },
+                { Role: { [Op.like]: `%${search}%` } },
+                { Type: { [Op.like]: `%${search}%` } },
+            ];
+        }
+
+        // Add specific filters if provided
+        if (Role) {
+            whereClause.Role = Role;
+        }
+
+        if (Type) {
+            whereClause.Type = Type;
+        }
+
+        if (Status !== undefined) {
+            whereClause.Status = Status === 'true';
+        }
+
+        if (ProvinceId) {
+            whereClause.ProvinceId = parseInt(ProvinceId);
+        }
+
+        if (WardId) {
+            whereClause.WardId = parseInt(WardId);
+        }
+
+        if (IsMember !== undefined) {
+            whereClause.IsMember = IsMember === 'true';
+        }
 
         if (page && limit) {
             const offset = (page - 1) * limit;
-            const where = search ? {
-                [Op.or]: [
-                    { Username: { [Op.like]: `%${search}%` } },
-                    { Name: { [Op.like]: `%${search}%` } },
-                    { Email: { [Op.like]: `%${search}%` } },
-                    { OrganizationName: { [Op.like]: `%${search}%` } },
-                    { Address: { [Op.like]: `%${search}%` } },
-                    { Position: { [Op.like]: `%${search}%` } },
-                    { NumberCount: { [Op.like]: `%${search}%` } },
-                    { EstablishedDate: { [Op.like]: `%${search}%` } },
-                    { Member: { [Op.like]: `%${search}%` } },
-                    { Status: { [Op.like]: `%${search}%` } },
-                    { '$Province.Name$': { [Op.like]: `%${search}%` } },
-                    { '$Ward.Name$': { [Op.like]: `%${search}%` } },
-                    { Role: { [Op.like]: `%${search}%` } },
-                    { Type: { [Op.like]: `%${search}%` } },
-                ]
-            } : {};
             const users = await User.findAndCountAll({
-                where,
+                where: whereClause,
                 offset: parseInt(offset),
                 limit: parseInt(limit),
                 order: [[sortColumn, sortDirection]],
@@ -50,12 +80,12 @@ exports.getAllUsers = async (req, res) => {
                     association: 'Ward',
                     attributes: ['Name']
                 }]
-
             });
             return res.status(200).json({ total: users.count, items: users.rows });
         }
 
         const users = await User.findAll({
+            where: whereClause,
             include: [{
                 association: 'Province',
                 attributes: ['Name']
@@ -144,32 +174,59 @@ exports.deleteUser = async (req, res) => {
 
 exports.getUsersByProvince = async (req, res) => {
     try {
-        const { provinceId, page, limit, search, sortColumn, sortDirection } = req.query;
+        const { provinceId, page, limit, search, sortColumn, sortDirection, Role, Type, Status, WardId, IsMember } = req.query;
         const offset = (page - 1) * limit;
-        const where = search ? {
-            [Op.or]: [
+        
+        // Build the where clause
+        let whereClause = {
+            ProvinceId: provinceId,
+        };
+
+        // Default roles filter for getUsersByProvince
+        whereClause.Role = ["HTX", "QTD"];
+
+        // Add search condition if provided
+        if (search) {
+            whereClause[Op.or] = [
                 { Username: { [Op.like]: `%${search}%` } },
                 { Name: { [Op.like]: `%${search}%` } },
                 { Email: { [Op.like]: `%${search}%` } },
                 { OrganizationName: { [Op.like]: `%${search}%` } },
                 { Address: { [Op.like]: `%${search}%` } },
                 { Position: { [Op.like]: `%${search}%` } },
-                { NumberCount: { [Op.like]: `%${search}%` } },
+                { MemberCount: { [Op.like]: `%${search}%` } },
                 { EstablishedDate: { [Op.like]: `%${search}%` } },
-                { Member: { [Op.like]: `%${search}%` } },
+                { IsMember: { [Op.like]: `%${search}%` } },
                 { Status: { [Op.like]: `%${search}%` } },
                 { '$Ward.Name$': { [Op.like]: `%${search}%` } },
                 { Role: { [Op.like]: `%${search}%` } },
                 { Type: { [Op.like]: `%${search}%` } },
-            ]
-        } : {};
+            ];
+        }
+
+        // Override default Role filter if specified
+        if (Role) {
+            whereClause.Role = Role;
+        }
+
+        if (Type) {
+            whereClause.Type = Type;
+        }
+
+        if (Status !== undefined) {
+            whereClause.Status = Status === 'true';
+        }
+
+        if (WardId) {
+            whereClause.WardId = parseInt(WardId);
+        }
+
+        if (IsMember !== undefined) {
+            whereClause.IsMember = IsMember === 'true';
+        }
 
         const users = await User.findAndCountAll({
-            where,
-            where: {
-                ProvinceId: provinceId,
-                Role: ["HTX", "QTD"],
-            },
+            where: whereClause,
             offset: parseInt(offset),
             limit: parseInt(limit),
             order: sortColumn && sortDirection ? [[sortColumn, sortDirection]] : [],
@@ -464,9 +521,9 @@ exports.exportUsers = async (req, res) => {
             "Phường/Xã": user.Ward ? user.Ward.Name : null,
             "Địa chỉ": user.Address,
             "Chức vụ": user.Position,
-            "Số lượng": user.NumberCount,
+            "Số lượng": user.MemberCount,
             "Ngày thành lập": formatDateToDDMMYYYY(user.EstablishedDate),
-            "Thành viên": user.Member,
+            "Thành viên": user.IsMember,
             "Trạng thái": user.Status,
             "Khóa": user.IsLocked,
             "Trạng thái khảo sát": user.SurveyStatus,
@@ -587,9 +644,9 @@ userQueue.process(async (job) => {
                         WardId: row.Ward ? wardMap.get(row.Ward) : null,
                         Address: row.Address,
                         Position: row.Position,
-                        NumberCount: row.NumberCount ? parseInt(row.NumberCount) : null,
+                        MemberCount: row.MemberCount ? parseInt(row.MemberCount) : null,
                         EstablishedDate: parseDateFromDDMMYYYY(row.EstablishedDate),
-                        Member: row.Member,
+                        IsMember: row.IsMember,
                         Status: row.Status === "true" || row.Status === true,
                         IsLocked: row.IsLocked === "true" || row.IsLocked === true,
                         SurveyStatus: row.SurveyStatus === "true" || row.SurveyStatus === true,

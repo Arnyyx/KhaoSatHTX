@@ -77,14 +77,36 @@ export const surveyService = {
 };
 
 export const userService = {
-    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection): Promise<UserResponse> => {
-        const response = await axios.get(`${BASE_URL}/users?page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+    getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
+        let url = `${BASE_URL}/users?page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
+        
+        // Add filter parameters if provided
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    url += `&${key}=${encodeURIComponent(value)}`;
+                }
+            });
+        }
+        
+        const response = await axios.get(url);
         return response.data;
     },
 
     getUsersByProvince: async (provinceId: number, page: number = initialPage, limit: number = initialLimit,
-        search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection): Promise<UserResponse> => {
-        const response = await axios.get(`${BASE_URL}/users/province?provinceId=${provinceId}&page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+        search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
+        let url = `${BASE_URL}/users/province?provinceId=${provinceId}&page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
+        
+        // Add filter parameters if provided
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    url += `&${key}=${encodeURIComponent(value)}`;
+                }
+            });
+        }
+        
+        const response = await axios.get(url);
         return response.data;
     },
 

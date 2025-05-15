@@ -16,13 +16,12 @@ type User = {
   WardId: number
   Address: string
   Position: string
-  NumberCount: number
+  MemberCount: number
   EstablishedDate: string
-  MemberTV: number
-  MemberKTV: number
+  IsMember: boolean
   Status: boolean
   IsLocked: boolean
-  SurveySuccess: number
+  SurveyStatus: boolean
   SurveyTime: number
 }
 

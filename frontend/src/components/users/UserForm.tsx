@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { userService, provinceService, wardService } from '@/lib/api';
 import { UserFormData, User } from '@/types/user';
 import { toast } from 'sonner';
@@ -46,9 +47,9 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         WardId: undefined,
         Address: '',
         Position: '',
-        NumberCount: undefined,
+        MemberCount: undefined,
         EstablishedDate: undefined,
-        Member: undefined,
+        IsMember: undefined,
         Status: undefined,
         IsLocked: undefined,
         SurveyStatus: undefined,
@@ -60,7 +61,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
 
     const isNonAdmin = formData.Role !== 'admin';
     const requiredFields = isNonAdmin
-        ? ['ProvinceId', 'WardId', 'OrganizationName', 'Name', 'Type', 'Address', 'Position', 'NumberCount', 'EstablishedDate', 'Member']
+        ? ['ProvinceId', 'WardId', 'OrganizationName', 'Name', 'Type', 'Address', 'Position', 'MemberCount', 'EstablishedDate', 'IsMember']
         : [];
 
     useEffect(() => {
@@ -91,7 +92,6 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
 
         const missingFields = [];
         if (!formData.Username) missingFields.push('Username');
-        if (!formData.Email) missingFields.push('Email');
         if (!user && !formData.Password) missingFields.push('Password');
         if (!formData.Role) missingFields.push('Role');
         if (isNonAdmin) {
@@ -148,14 +148,13 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="Email" className="text-right">Email *</Label>
+                            <Label htmlFor="Email" className="text-right">Email</Label>
                             <Input
                                 id="Email"
                                 type="email"
                                 value={formData.Email}
                                 onChange={(e) => setFormData({ ...formData, Email: e.target.value })}
                                 className="col-span-3"
-                                required
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -282,12 +281,12 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="NumberCount" className="text-right">Number Count *</Label>
+                                    <Label htmlFor="MemberCount" className="text-right">Member Count *</Label>
                                     <Input
-                                        id="NumberCount"
+                                        id="MemberCount"
                                         type="number"
-                                        value={formData.NumberCount !== undefined ? formData.NumberCount : ''}
-                                        onChange={(e) => setFormData({ ...formData, NumberCount: parseInt(e.target.value) || undefined })}
+                                        value={formData.MemberCount !== undefined ? formData.MemberCount : ''}
+                                        onChange={(e) => setFormData({ ...formData, MemberCount: parseInt(e.target.value) || undefined })}
                                         className="col-span-3"
                                         required
                                     />
@@ -304,19 +303,17 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="Member" className="text-right">Member *</Label>
-                                    <Select
-                                        value={formData.Member}
-                                        onValueChange={(value) => setFormData({ ...formData, Member: value as any })}
-                                    >
-                                        <SelectTrigger className="col-span-3">
-                                            <SelectValue placeholder="Select member" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="KTV">KTV</SelectItem>
-                                            <SelectItem value="TV">TV</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Label htmlFor="IsMember" className="text-right">Is Member</Label>
+                                    <div className="col-span-3">
+                                        <div className="flex items-center space-x-2">
+                                            <Switch
+                                                id="IsMember"
+                                                checked={formData.IsMember || false}
+                                                onCheckedChange={(checked) => setFormData({ ...formData, IsMember: checked })}
+                                            />
+                                            <Label htmlFor="IsMember">{formData.IsMember ? 'Yes' : 'No'}</Label>
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}
