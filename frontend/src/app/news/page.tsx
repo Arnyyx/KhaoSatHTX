@@ -17,60 +17,6 @@ export default function Layout({ children }) {
         />
       </Head>
 
-         <header>
-        {/* Header Start */}
-        <div className="header-area">
-          <div className="header-mid gray-bg">
-            <div className="row">
-              <div className="row d-flex align-items-center">
-                {/* Logo */}
-                <div className="col-md-12">
-                  <div className="header-banner f-right" style={{ width: "100%" }}>
-                    <div className="banner">
-                      <img src="/assets/img/Banner.png" alt="Banner" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="header-bottom header-sticky">
-            <div className="menu-wrapper">
-              <div className="container content-wrapper">
-                <div className="menu">
-                  <nav className="navbar">
-                    <ul className="nav-menu">
-                      <li><a href="/">Trang chủ</a></li>
-                      <li><a href="/intro">Giới thiệu</a></li>
-                      <li className="dropdown">
-                        <a href="/document">Văn bản</a>
-                       
-                      </li>
-                      <li><a href="/news">Tin tức</a></li>
-                      <li><a href="#">Khảo sát</a></li>
-                      <li><a href="#">Hướng dẫn</a></li>
-                      <li><a href="#">Tra cứu</a></li>
-                    </ul>
-                  </nav>
-
-                  <div className="search-box">
-                    <input type="text" placeholder="Tìm kiếm..." />
-                    <button type="submit">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#3071c8" viewBox="0 0 24 24">
-                        <path d="M10 2a8 8 0 105.293 14.707l5 5 1.414-1.414-5-5A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <a href="/login">ĐĂNG NHẬP</a>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-        {/* Header End */}
-      </header>
 
       <div className="container content-wrapper">
         <div className="text-center my-8">
@@ -184,18 +130,7 @@ export default function Layout({ children }) {
         </div>
       </div>
 
-      <footer className="footer content-wrapper">
-        <div className="footer-main">
-          <h3>ỦY BAN KIỂM TRA – LIÊN MINH HỢP TÁC XÃ VIỆT NAM</h3>
-          <p>
-            Địa chỉ: Số 6 Dương Đình Nghệ, phường Yên Hòa, quận Cầu Giấy, Tp Hà Nội<br />
-            Điện thoại: (+84)(80)49711
-          </p>
-        </div>
-        <div className="footer-bottom">
-          Thiết kế bởi Viện Khoa học công nghệ và Môi trường
-        </div>
-      </footer>
+      
 
       <div className="search-model-box" style={{ display: "none" }}>
         <div className="d-flex align-items-center h-100 justify-content-center">
