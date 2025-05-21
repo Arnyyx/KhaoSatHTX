@@ -80,8 +80,7 @@ export const surveyService = {
 export const userService = {
     getUsers: async (page: number = initialPage, limit: number = initialLimit, search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
         let url = `${BASE_URL}/users?page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
-        
-        // Add filter parameters if provided
+
         if (filters) {
             Object.entries(filters).forEach(([key, value]) => {
                 if (value !== undefined) {
@@ -89,7 +88,7 @@ export const userService = {
                 }
             });
         }
-        
+
         const response = await axios.get(url);
         return response.data;
     },
@@ -102,7 +101,7 @@ export const userService = {
     getUsersByProvince: async (provinceId: number, page: number = initialPage, limit: number = initialLimit,
         search: string = initialSearch, sortColumn: string = initialSortColumn, sortDirection: string = initialSortDirection, filters?: Record<string, any>): Promise<UserResponse> => {
         let url = `${BASE_URL}/users/province?provinceId=${provinceId}&page=${page}&limit=${limit}&sortColumn=${sortColumn}&sortDirection=${sortDirection}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
-        
+
         // Add filter parameters if provided
         if (filters) {
             Object.entries(filters).forEach(([key, value]) => {
@@ -111,7 +110,7 @@ export const userService = {
                 }
             });
         }
-        
+
         const response = await axios.get(url);
         return response.data;
     },
@@ -136,20 +135,19 @@ export const userService = {
         return response.data;
     },
     deleteMultipleUsers: async (ids: number[]) => {
-        const response = await axios.delete(`${BASE_URL}/users`, { data: { ids } });
+        const response = await axios.delete(`${BASE_URL}/users/bulk`, { data: { ids } });
         return response.data;
     },
     importUsers: async (file: File) => {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            
-            // Get the current user's ID from cookie
+
             const userId = Cookies.get('ID_user');
             if (userId) {
                 formData.append("userId", userId);
             }
-            
+
             const response = await axios.post(`${BASE_URL}/users/import`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'

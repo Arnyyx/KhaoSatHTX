@@ -176,7 +176,7 @@ exports.getUsersByProvince = async (req, res) => {
     try {
         const { provinceId, page, limit, search, sortColumn, sortDirection, Role, Type, Status, WardId, IsMember } = req.query;
         const offset = (page - 1) * limit;
-        
+
         // Build the where clause
         let whereClause = {
             ProvinceId: provinceId,
@@ -314,44 +314,44 @@ exports.userLogin = async (req, res) => {
     }
 };
 exports.exportFilteredUser = async (req, res) => {
-  try {
-    const whereClause = {};
+    try {
+        const whereClause = {};
 
-    if (req.query.province_id !== 'undefined') {
-        whereClause.ProvinceId = req.query.province_id;
-    }
+        if (req.query.province_id !== 'undefined') {
+            whereClause.ProvinceId = req.query.province_id;
+        }
 
-    if (req.query.ward_id !== 'undefined') {
-        whereClause.WardId = req.query.ward_id;
-    }
+        if (req.query.ward_id !== 'undefined') {
+            whereClause.WardId = req.query.ward_id;
+        }
 
-    if (req.query.role !== 'undefined') {
-        whereClause.Role = req.query.role;
-    }
+        if (req.query.role !== 'undefined') {
+            whereClause.Role = req.query.role;
+        }
 
-    if (req.query.type !== 'undefined') {
-        whereClause.Type = req.query.type;
-    }
+        if (req.query.type !== 'undefined') {
+            whereClause.Type = req.query.type;
+        }
 
-    if (req.query.survey_status !== 'undefined') {
-        whereClause.SurveyStatus = req.query.survey_status === 'true';
-    }
+        if (req.query.survey_status !== 'undefined') {
+            whereClause.SurveyStatus = req.query.survey_status === 'true';
+        }
 
-    const users = await User.findAll({
-        where: whereClause,
-        attributes: ['OrganizationName', 'Name', 'Address', 'Username', 'Email'],
-        include: [{
-            association: 'Province',
-            attributes: ['Name']
-        },
-        {
-            association: 'Ward',
-            attributes: ['Name']
-        }]
-    });
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Người dùng');
-      worksheet.columns = [
+        const users = await User.findAll({
+            where: whereClause,
+            attributes: ['OrganizationName', 'Name', 'Address', 'Username', 'Email'],
+            include: [{
+                association: 'Province',
+                attributes: ['Name']
+            },
+            {
+                association: 'Ward',
+                attributes: ['Name']
+            }]
+        });
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Người dùng');
+        worksheet.columns = [
             { header: 'Tên tổ chức', key: 'OrganizationName', width: 30 },
             { header: 'Tên người dùng', key: 'Name', width: 30 },
             { header: 'Tên tỉnh', key: 'ProvinceName', width: 30 },
@@ -359,26 +359,26 @@ exports.exportFilteredUser = async (req, res) => {
             { header: 'Địa chỉ', key: 'Address', width: 30 },
             { header: 'SDT', key: 'Username', width: 20 },
             { header: 'Email', key: 'Email', width: 30 },
-      ];
-      const rows = users.map((user) => {
-          const u = user.toJSON();
-          return {
-              ...u,
-              ProvinceName: u.Province?.Name || '',
-              WardName: u.Ward?.Name || '',
-          };
-      });
-      worksheet.addRows(rows);
+        ];
+        const rows = users.map((user) => {
+            const u = user.toJSON();
+            return {
+                ...u,
+                ProvinceName: u.Province?.Name || '',
+                WardName: u.Ward?.Name || '',
+            };
+        });
+        worksheet.addRows(rows);
 
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=FilteredUsers.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=FilteredUsers.xlsx');
 
-      await workbook.xlsx.write(res);
-      res.end();
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Export failed');
-  }
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Export failed');
+    }
 };
 
 exports.logout = (req, res) => {
@@ -561,18 +561,18 @@ exports.exportUsers = async (req, res) => {
 exports.checkUsername = async (req, res) => {
     try {
         const { username } = req.query;
-        
+
         if (!username) {
-            return res.status(400).json({ 
-                message: "Username is required", 
-                exists: false 
+            return res.status(400).json({
+                message: "Username is required",
+                exists: false
             });
         }
-        
+
         const user = await User.findOne({
             where: { Username: username }
         });
-        
+
         return res.status(200).json({
             exists: !!user
         });
@@ -592,14 +592,11 @@ exports.importUsers = async (req, res) => {
             return res.status(400).json({ message: "Vui lòng tải lên file Excel" });
         }
 
-        // Get the current user's ID from cookies or authorization header
         let currentUserId;
-        
-        // Try to get from cookie first
+
         if (req.cookies && req.cookies.ID_user) {
             currentUserId = req.cookies.ID_user;
-        } 
-        // If not in cookie, try authorization header
+        }
         else if (req.headers.authorization) {
             const token = req.headers.authorization.split(' ')[1];
             try {
@@ -609,8 +606,7 @@ exports.importUsers = async (req, res) => {
                 console.error("Token verification failed:", err);
                 return res.status(401).json({ message: "Token không hợp lệ" });
             }
-        } 
-        // If userId is in the request body (from frontend)
+        }
         else if (req.body.userId) {
             currentUserId = req.body.userId;
         }
@@ -618,11 +614,11 @@ exports.importUsers = async (req, res) => {
             return res.status(401).json({ message: "Không thể xác định người dùng" });
         }
 
-        // Get user details to get ProvinceId
         const currentUser = await User.findByPk(currentUserId);
         if (!currentUser || !currentUser.ProvinceId) {
             return res.status(400).json({ message: "Người dùng không hợp lệ hoặc không có ProvinceId" });
         }
+
 
         const workbook = XLSX.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
@@ -641,6 +637,7 @@ exports.importUsers = async (req, res) => {
             });
         }
 
+
         const usersData = data.slice(1).map((row) => {
             const user = {};
             headers.forEach((header, index) => {
@@ -651,14 +648,14 @@ exports.importUsers = async (req, res) => {
             return user;
         });
 
-        const job = await userQueue.add({ 
-            usersData,
-            currentUserProvinceId: currentUser.ProvinceId 
-        });
+        // Process the data immediately instead of using queue
+        const result = await processImportData(usersData, currentUser.ProvinceId);
 
-        res.status(202).json({
-            message: "Đang xử lý file Excel, bạn sẽ nhận kết quả sau",
-            jobId: job.id,
+        res.status(200).json({
+            message: "Xử lý file Excel hoàn tất",
+            created: result.created,
+            errors: result.errors,
+            duplicateUsernames: result.duplicateUsernames
         });
     } catch (error) {
         console.error("Error in importUsers:", error);
@@ -669,21 +666,23 @@ exports.importUsers = async (req, res) => {
     }
 };
 
-
-userQueue.process(async (job) => {
-    console.time(`Job ${job.id}`);
-    const { usersData, currentUserProvinceId } = job.data;
+// Helper function to process import data
+async function processImportData(usersData, currentUserProvinceId) {
     const errors = [];
     const createdUsers = [];
     const duplicateUsernames = [];
     const BATCH_SIZE = 20;
 
     const provinces = await Province.findAll({ attributes: ["Id", "Name"] });
-    const wards = await Ward.findAll({ attributes: ["Id", "Name"] });
-    const provinceMap = new Map(provinces.map((p) => [p.Name, p.Id]));
-    const wardMap = new Map(wards.map((w) => [w.Name, w.Id]));
+    const wards = await Ward.findAll({
+        where: { ProvinceId: currentUserProvinceId },
+        attributes: ["Id", "Name"]
+    });
+    const wardMap = new Map();
+    wards.forEach(ward => {
+        wardMap.set(ward.Name.toLowerCase(), ward.Id);
+    });
 
-    // Pre-check all usernames to find duplicates
     const usernames = usersData.map(row => row.Username);
     const existingUsers = await User.findAll({
         where: {
@@ -691,8 +690,41 @@ userQueue.process(async (job) => {
         },
         attributes: ['Username']
     });
-    
+
     const existingUsernames = new Set(existingUsers.map(user => user.Username));
+
+    for (const row of usersData) {
+        if (existingUsernames.has(row.Username)) {
+            errors.push({
+                row,
+                errors: [`Username "${row.Username}" đã tồn tại trong hệ thống`]
+            });
+            duplicateUsernames.push(row.Username);
+            continue;
+        }
+
+        if (row.Ward && !wardMap.has(row.Ward.toLowerCase())) {
+            errors.push({
+                row,
+                errors: [`Không tìm thấy phường/xã "${row.Ward}" trong hệ thống`]
+            });
+            continue;
+        }
+
+        const validationErrors = validateUserData(row);
+        if (validationErrors.length > 0) {
+            errors.push({ row, errors: validationErrors });
+            continue;
+        }
+    }
+
+    if (errors.length > 0) {
+        return {
+            created: 0,
+            errors,
+            duplicateUsernames
+        };
+    }
 
     for (let i = 0; i < usersData.length; i += BATCH_SIZE) {
         const batch = usersData.slice(i, i + BATCH_SIZE);
@@ -700,48 +732,28 @@ userQueue.process(async (job) => {
         await sequelize.transaction(async (t) => {
             for (const row of batch) {
                 try {
-                    // Check if username already exists
-                    if (existingUsernames.has(row.Username)) {
-                        errors.push({ 
-                            row, 
-                            errors: [`Username "${row.Username}" đã tồn tại trong hệ thống`] 
-                        });
-                        duplicateUsernames.push(row.Username);
-                        continue;
-                    }
-
-                    const validationErrors = validateUserData(row);
-                    if (validationErrors.length > 0) {
-                        errors.push({ row, errors: validationErrors });
-                        continue;
-                    }
-
-                    // Convert string values to appropriate types
                     const userData = {
                         Username: row.Username,
                         Password: row.Password,
                         OrganizationName: row.OrganizationName,
                         Name: row.Name,
                         Role: row.Role,
-                        Email: row.Email,
+                        Email: row.Email || "",
                         Type: row.Type,
-                        // Use the current user's ProvinceId instead of the one from the file
                         ProvinceId: currentUserProvinceId,
-                        WardId: row.Ward ? wardMap.get(row.Ward) : null,
+                        WardId: row.Ward ? wardMap.get(row.Ward.toLowerCase()) : null,
                         Address: row.Address,
                         Position: row.Position,
                         MemberCount: row.MemberCount ? parseInt(row.MemberCount) : null,
                         EstablishedDate: parseDateFromDDMMYYYY(row.EstablishedDate),
-                        IsMember: row.IsMember === "true" || row.IsMember === true || row.IsMember === "1" || row.IsMember === 1,
-                        Status: row.Status === "true" || row.Status === true,
+                        IsMember: row.IsMember === "true" || row.IsMember === "Có" || row.IsMember === true || row.IsMember === "1" || row.IsMember === 1,
+                        Status: row.Status === "true" || row.Status === "Hoạt động" || row.Status === true,
                         IsLocked: row.IsLocked === "true" || row.IsLocked === true,
                         SurveyStatus: row.SurveyStatus === "true" || row.SurveyStatus === true,
                         SurveyTime: row.SurveyTime ? parseInt(row.SurveyTime) : null,
                     };
 
                     const user = await User.create(userData, { transaction: t });
-                    // Add this username to the set to catch duplicates within the same import
-                    existingUsernames.add(row.Username);
                     createdUsers.push(user);
                 } catch (error) {
                     errors.push({ row, error: error.message });
@@ -750,12 +762,40 @@ userQueue.process(async (job) => {
         });
     }
 
-    console.timeEnd(`Job ${job.id}`);
-    console.log(`Processed job ${job.id}: ${createdUsers.length} users created, ${errors.length} errors, ${duplicateUsernames.length} duplicate usernames`);
-
-    return { 
-        created: createdUsers.length, 
-        errors, 
+    return {
+        created: createdUsers.length,
+        errors,
         duplicateUsernames
     };
-});
+}
+
+exports.deleteMultipleUsers = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: "Danh sách ID không hợp lệ" });
+        }
+
+        const deleted = await User.destroy({
+            where: {
+                Id: ids
+            }
+        });
+
+        if (deleted > 0) {
+            res.status(200).json({
+                message: `Đã xóa thành công ${deleted} người dùng`,
+                deletedCount: deleted
+            });
+        } else {
+            res.status(404).json({ message: "Không tìm thấy người dùng nào để xóa" });
+        }
+    } catch (error) {
+        console.error("Error in deleteMultipleUsers:", error);
+        res.status(400).json({
+            message: "Lỗi khi xóa nhiều người dùng",
+            error: error.message
+        });
+    }
+};

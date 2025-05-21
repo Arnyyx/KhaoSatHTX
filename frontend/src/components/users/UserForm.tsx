@@ -12,6 +12,7 @@ import { UserFormData, User } from '@/types/user';
 import { toast } from 'sonner';
 import { format, parse } from 'date-fns';
 import { DatePicker } from '@/components/ui/date-picker';
+import { vi } from 'date-fns/locale';
 
 interface Province {
     Id: number;
@@ -170,7 +171,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
             if (formData.Username) {
                 const exists = await checkUsernameExists(formData.Username);
                 if (exists) {
-                    setUsernameError('Username already exists');
+                    setUsernameError('Tên đăng nhập đã tồn tại');
                 }
             }
         }, 500);
@@ -182,15 +183,25 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
         e.preventDefault();
 
         const missingFields = [];
-        if (!formData.Username) missingFields.push('Username');
-        if (!user && !formData.Password) missingFields.push('Password');
-        if (!formData.Role) missingFields.push('Role');
+        if (!formData.Username) missingFields.push('Tên đăng nhập');
+        if (!user && !formData.Password) missingFields.push('Mật khẩu');
+        if (!formData.Role) missingFields.push('Vai trò');
 
         // Check required fields based on role
         if (isNonAdmin) {
             requiredFields.forEach((field) => {
                 if (formData[field as keyof UserFormData] === undefined || formData[field as keyof UserFormData] === '') {
-                    missingFields.push(field);
+                    let fieldName = field;
+                    if (field === 'ProvinceId') fieldName = 'Tỉnh/Thành phố';
+                    if (field === 'WardId') fieldName = 'Phường/Xã';
+                    if (field === 'OrganizationName') fieldName = 'Tên tổ chức';
+                    if (field === 'Name') fieldName = 'Tên người quản lý';
+                    if (field === 'Type') fieldName = 'Loại';
+                    if (field === 'Address') fieldName = 'Địa chỉ';
+                    if (field === 'Position') fieldName = 'Chức vụ';
+                    if (field === 'MemberCount') fieldName = 'Số lượng thành viên';
+                    if (field === 'EstablishedDate') fieldName = 'Ngày thành lập';
+                    missingFields.push(fieldName);
                 }
             });
         }
@@ -238,7 +249,9 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>                    <DialogTitle className="text-xl">{user ? 'Chỉnh sửa người dùng' : 'Thêm người dùng'}</DialogTitle>                </DialogHeader>
+                <DialogHeader>
+                    <DialogTitle className="text-xl">{user ? 'Chỉnh sửa người dùng' : 'Thêm người dùng'}</DialogTitle>
+                </DialogHeader>
                 <form onSubmit={handleSubmit}>
                     <div className="grid gap-6 py-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -246,15 +259,17 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                 <h3 className="text-lg font-medium">Thông tin cơ bản</h3>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="Username">Tên đăng nhập *</Label>
+                                    <Label htmlFor="Username">Tên đăng nhập <span className="text-red-500">*</span></Label>
                                     <Input
                                         id="Username"
                                         value={formData.Username}
                                         onChange={(e) => setFormData({ ...formData, Username: e.target.value })}
                                         required
                                         className={usernameError ? "border-red-500" : ""}
+                                        disabled={!!user}
                                     />
-                                    {usernameError && <p className="text-sm text-red-500">Tên đăng nhập đã tồn tại</p>}                                    {isCheckingUsername && <p className="text-sm text-blue-500">Đang kiểm tra tên đăng nhập...</p>}
+                                    {usernameError && <p className="text-sm text-red-500">{usernameError}</p>}
+                                    {isCheckingUsername && <p className="text-sm text-blue-500">Đang kiểm tra tên đăng nhập...</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -268,7 +283,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="Password">{user ? 'Mật khẩu (để trống nếu không thay đổi)' : 'Mật khẩu *'}</Label>
+                                    <Label htmlFor="Password">{user ? 'Mật khẩu (để trống nếu không thay đổi)' : 'Mật khẩu'} {!user && <span className="text-red-500">*</span>}</Label>
                                     <Input
                                         id="Password"
                                         type="password"
@@ -279,12 +294,18 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="Role">Vai trò *</Label>                                    <Select value={formData.Role} onValueChange={(value) => setFormData({ ...formData, Role: value as any })}                                    >                                        <SelectTrigger>                                            <SelectValue placeholder="Chọn vai trò" />
-                                    </SelectTrigger>
+                                    <Label htmlFor="Role">Vai trò <span className="text-red-500">*</span></Label>
+                                    <Select 
+                                        value={formData.Role} 
+                                        onValueChange={(value) => setFormData({ ...formData, Role: value as any })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn vai trò" />
+                                        </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="LMHTX">LMHTX</SelectItem>
-                                            <SelectItem value="QTD">QTD</SelectItem>
-                                            <SelectItem value="HTX">HTX</SelectItem>
+                                            <SelectItem value="QTD">Quỹ tín dụng</SelectItem>
+                                            <SelectItem value="HTX">Hợp tác xã</SelectItem>
                                             <SelectItem value="admin">Admin</SelectItem>
                                             <SelectItem value="UBKT">UBKT</SelectItem>
                                         </SelectContent>
@@ -292,8 +313,12 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="Status">Trạng thái</Label>                                    <div className="flex items-center space-x-2">                                        <Switch id="Status" checked={formData.Status || false} onCheckedChange={(checked) => setFormData({ ...formData, Status: checked })} />                                        <Label htmlFor="Status" className="cursor-pointer">                                            {formData.Status ? 'Hoạt động' : 'Không hoạt động'}
-                                    </Label>
+                                    <Label htmlFor="Status">Trạng thái</Label>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch id="Status" checked={formData.Status || false} onCheckedChange={(checked) => setFormData({ ...formData, Status: checked })} />
+                                        <Label htmlFor="Status" className="cursor-pointer">
+                                            {formData.Status ? 'Hoạt động' : 'Không hoạt động'}
+                                        </Label>
                                     </div>
                                 </div>
                             </div>
@@ -303,7 +328,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     <h3 className="text-lg font-medium">Thông tin tổ chức</h3>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="OrganizationName">Tên tổ chức {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="OrganizationName">Tên tổ chức {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <Input
                                             id="OrganizationName"
                                             value={formData.OrganizationName || ''}
@@ -313,7 +338,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="Name">Tên người quản lý {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="Name">Tên người quản lý {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <Input
                                             id="Name"
                                             value={formData.Name || ''}
@@ -323,7 +348,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="Type">Loại {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="Type">Loại hình {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <Select
                                             value={formData.Type}
                                             onValueChange={(value) => setFormData({ ...formData, Type: value as any })}
@@ -332,14 +357,14 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                                 <SelectValue placeholder="Chọn loại" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="PNN">PNN</SelectItem>
-                                                <SelectItem value="NN">NN</SelectItem>
+                                                <SelectItem value="PNN">Phi nông nghiệp</SelectItem>
+                                                <SelectItem value="NN">Nông nghiệp</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="Position">Chức vụ {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="Position">Chức vụ {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <Input
                                             id="Position"
                                             value={formData.Position || ''}
@@ -349,7 +374,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="MemberCount">Số lượng thành viên {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="MemberCount">Số lượng thành viên {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <Input
                                             id="MemberCount"
                                             type="number"
@@ -360,7 +385,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="EstablishedDate">Ngày thành lập {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="EstablishedDate">Ngày thành lập {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <DatePicker
                                             date={formData.EstablishedDate ? convertStringToDate(formData.EstablishedDate) : undefined}
                                             onSelect={(date) => setFormData({ ...formData, EstablishedDate: date ? parseDate(date) : undefined })}
@@ -387,26 +412,29 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
 
                         {isNonAdmin && (
                             <div className="space-y-4">
-                                <h3 className="text-lg font-medium">Thông tin địa điểm</h3>                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                                    <div className="space-y-2">                                        <Label htmlFor="ProvinceId">Tỉnh/Thành phố *</Label>
-                                    <Select
-                                        value={formData.ProvinceId ? formData.ProvinceId.toString() : undefined}
-                                        onValueChange={(value) => setFormData({ ...formData, ProvinceId: parseInt(value), WardId: undefined })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn tỉnh/thành phố" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {provinces.map((province) => (
-                                                <SelectItem key={province.Id} value={province.Id.toString()}>
-                                                    {province.Name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <h3 className="text-lg font-medium">Thông tin địa điểm</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ProvinceId">Tỉnh/Thành phố <span className="text-red-500">*</span></Label>
+                                        <Select
+                                            value={formData.ProvinceId ? formData.ProvinceId.toString() : undefined}
+                                            onValueChange={(value) => setFormData({ ...formData, ProvinceId: parseInt(value), WardId: undefined })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Chọn tỉnh/thành phố" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {provinces.map((province) => (
+                                                    <SelectItem key={province.Id} value={province.Id.toString()}>
+                                                        {province.Name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="WardId">Phường/Xã {!isLMHTX && '*'}</Label>
+                                        <Label htmlFor="WardId">Phường/Xã {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                         <Select
                                             value={formData.WardId ? formData.WardId.toString() : undefined}
                                             onValueChange={(value) => {
@@ -420,7 +448,8 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                             disabled={!formData.ProvinceId || wards.length === 0}
                                         >
                                             <SelectTrigger>
-                                                <SelectValue placeholder={wards.length > 0 ? "Chọn phường/xã" : "Chọn tỉnh/thành phố trước"}>                                                    {selectedWardName || "Chọn phường/xã"}
+                                                <SelectValue placeholder={wards.length > 0 ? "Chọn phường/xã" : "Chọn tỉnh/thành phố trước"}>
+                                                    {selectedWardName || "Chọn phường/xã"}
                                                 </SelectValue>
                                             </SelectTrigger>
                                             <SelectContent>
@@ -435,7 +464,7 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="Address">Địa chỉ {!isLMHTX && '*'}</Label>
+                                    <Label htmlFor="Address">Địa chỉ {!isLMHTX && <span className="text-red-500">*</span>}</Label>
                                     <Input
                                         id="Address"
                                         value={formData.Address || ''}
@@ -448,7 +477,8 @@ export function UserForm({ open, onOpenChange, user, onSuccess }: UserFormProps)
                     </div>
 
                     <DialogFooter className="pt-4 gap-2">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>    Hủy
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            Hủy
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? 'Đang lưu...' : 'Lưu'}
