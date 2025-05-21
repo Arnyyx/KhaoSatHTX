@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
     Table,
     TableBody,
@@ -57,9 +57,16 @@ export function UnionTable() {
     const [filters, setFilters] = useState({
         role: "",
         type: "",
-        status: ""
+        status: "",
+        wardId: "",
     });
     const [showFilters, setShowFilters] = useState(false);
+    const [wardMap, setWardMap] = useState<Map<number, string>>(new Map());
+    const [deletingAllConfirm, setDeletingAllConfirm] = useState(false);
+    const [localSort, setLocalSort] = useState<{
+        column: string | null;
+        direction: "ASC" | "DESC";
+    }>({ column: null, direction: "ASC" });
 
     // Column visibility state
     const [columnVisibility, setColumnVisibility] = useState({
@@ -69,8 +76,10 @@ export function UnionTable() {
         role: true,
         email: true,
         type: true,
+        ward: true,
         status: true,
     });
+
 
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -134,6 +143,13 @@ export function UnionTable() {
         });
     };
 
+    const handleWardSort = () => {
+        setLocalSort(prev => ({
+            column: "ward",
+            direction: prev.column === "ward" && prev.direction === "ASC" ? "DESC" : "ASC"
+        }));
+    };
+
     const handleSelect = (id: number) => {
         setSelected((prev) =>
             prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -151,7 +167,7 @@ export function UnionTable() {
                 Role: data.role,
                 Email: data.email || "",
                 Type: data.type,
-                WardName: data.wardName,
+                WardId: data.wardId,
                 Address: data.address,
                 Position: data.position,
                 MemberCount: data.memberCount,
@@ -188,7 +204,7 @@ export function UnionTable() {
                     Role: data.role,
                     Email: data.email || "",
                     Type: data.type,
-                    WardName: data.wardName,
+                    WardId: data.wardId,
                     Address: data.address,
                     Position: data.position,
                     MemberCount: data.memberCount,
@@ -301,12 +317,68 @@ export function UnionTable() {
         }
     };
 
-    const sortedUsers = [...users].sort((a, b) => {
-        const factor = sort.direction === "ASC" ? 1 : -1;
-        const aValue = a[sort.column as keyof User] ?? "";
-        const bValue = b[sort.column as keyof User] ?? "";
-        return aValue > bValue ? factor : -factor;
-    });
+    const handleDeleteAll = async () => {
+        try {
+            const allIds = users.map(user => user.Id);
+            setRecentlyDeleted(prev => [...prev, ...users]);
+            await userService.deleteMultipleUsers(allIds);
+
+            fetchUsers(search);
+            setDeletingAllConfirm(false);
+
+            toast.success(`Đã xóa tất cả ${allIds.length} HTX/QTD thành công`, {
+                action: {
+                    label: "Hoàn tác",
+                    onClick: async () => {
+                        try {
+                            let success = 0;
+                            for (const user of users) {
+                                const { Id, ...userData } = user;
+                                await userService.createUser(userData);
+                                success++;
+                            }
+                            fetchUsers(search);
+                            setRecentlyDeleted([]);
+                            toast.success(`Đã hoàn tác thao tác xóa ${success} HTX/QTD`);
+                        } catch (error) {
+                            console.error("Error undoing mass delete:", error);
+                            toast.error("Không thể hoàn tác toàn bộ thao tác xóa");
+                        }
+                    }
+                }
+            });
+        } catch (error: any) {
+            console.error("Error deleting all HTX/QTDs:", error);
+            const errorMessage = error.response?.data?.message || error.message || "Đã xảy ra lỗi";
+            toast.error("Lỗi khi xóa tất cả HTX/QTD", {
+                description: errorMessage,
+            });
+        }
+    };
+
+
+    const sortedUsers = useMemo(() => {
+        let result = [...users];
+
+        if (localSort.column === "ward") {
+            result = result.sort((a, b) => {
+                const factor = localSort.direction === "ASC" ? 1 : -1;
+                const wardNameA = wardMap.get(a.WardId || 0) || "";
+                const wardNameB = wardMap.get(b.WardId || 0) || "";
+                return wardNameA.localeCompare(wardNameB) * factor;
+            });
+        } else {
+            result = result.sort((a, b) => {
+                const factor = sort.direction === "ASC" ? 1 : -1;
+                const aValue = a[sort.column as keyof User] ?? "";
+                const bValue = b[sort.column as keyof User] ?? "";
+                return aValue > bValue ? factor : -factor;
+            });
+        }
+
+        return result;
+    }, [users, sort, localSort, wardMap]);
+
 
     // Apply client-side filtering
     const filteredUsers = sortedUsers.filter(user => {
@@ -314,6 +386,7 @@ export function UnionTable() {
         if (filters.type && user.Type !== filters.type) return false;
         if (filters.status === "active" && !user.Status) return false;
         if (filters.status === "inactive" && user.Status) return false;
+        if (filters.wardId && user.WardId !== Number(filters.wardId)) return false;
         return true;
     });
 
@@ -326,7 +399,8 @@ export function UnionTable() {
         setFilters({
             role: "",
             type: "",
-            status: ""
+            status: "",
+            wardId: ""
         });
     };
 
@@ -387,62 +461,45 @@ export function UnionTable() {
 
     // Function to validate import data
     const validateImportData = (data: any[]) => {
-        const errors = excelUtils.validateUnionImportData(data);
+        const errors = excelUtils.validateUnionImportData(data, wards);
         setImportErrors(errors);
     };
 
+
     // Function to handle import
+    // In frontend/src/components/unions/UnionTable.tsx
     const handleImport = async () => {
         if (!importFile) {
             toast.error("Vui lòng chọn file Excel");
             return;
         }
 
-        if (Object.keys(importErrors).length > 0) {
-            toast.error("Dữ liệu nhập không hợp lệ. Vui lòng kiểm tra lại.");
-            return;
-        }
-
-        if (importData.length === 0) {
-            toast.error("Không có dữ liệu để nhập");
-            return;
-        }
-
         try {
             setIsImporting(true);
 
-            try {
-                // Call API to import data, sending the original file
-                const response = await userService.importUsers(importFile);
+            const response = await userService.importUsers(importFile);
 
-                toast.success("Nhập dữ liệu thành công", {
-                    description: "File đã được tải lên và đang được xử lý"
-                });
+            // Reset import state
+            setImportFile(null);
+            setImportData([]);
+            setImportErrors({});
+            setIsImportDialogOpen(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
 
-                // Reset import state
-                setImportFile(null);
-                setImportData([]);
-                setImportErrors({});
-                setIsImportDialogOpen(false);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                }
-
-                // Refresh the data
-                fetchUsers(search);
-            } catch (error: any) {
-                console.error("API Error Response:", error.response?.data);
-
-                // Show detailed error message if available
-                const errorDetail = error.response?.data?.message || error.response?.data?.error || error.message;
-                toast.error("Lỗi khi nhập dữ liệu", {
-                    description: `${errorDetail}. Vui lòng kiểm tra dữ liệu và thử lại.`
+    
+            if (response.duplicateUsernames && response.duplicateUsernames.length > 0) {
+                toast.error("Lỗi trùng username", {
+                    description: `Các username sau đã tồn tại trong hệ thống: ${response.duplicateUsernames.join(', ')}`
                 });
             }
+            toast.success(`Đã nhập ${response.created} bản ghi`);
+            fetchUsers(search);
         } catch (error: any) {
             console.error("Error importing data:", error);
             toast.error("Lỗi khi xử lý dữ liệu Excel", {
-                description: error.message
+                description: error.response?.data?.message || error.message
             });
         } finally {
             setIsImporting(false);
@@ -479,6 +536,7 @@ export function UnionTable() {
             role: true,
             email: true,
             type: true,
+            ward: true,
             status: true,
         });
     };
@@ -489,12 +547,18 @@ export function UnionTable() {
             wardService.getWardsByProvinceId(currentUser.ProvinceId)
                 .then((response: { items: { Id: number; Name: string }[] }) => {
                     setWards(response.items);
+                    const map = new Map<number, string>();
+                    response.items.forEach(ward => {
+                        map.set(ward.Id, ward.Name);
+                    });
+                    setWardMap(map);
                 })
                 .catch((error: any) => {
                     console.error("Error fetching wards:", error);
                 });
         }
     }, [currentUser?.ProvinceId]);
+
 
     return (
         <div className="p-4">
@@ -595,6 +659,12 @@ export function UnionTable() {
                                 Người quản lý
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuCheckboxItem
+                                checked={columnVisibility.ward}
+                                onCheckedChange={() => toggleColumnVisibility('ward')}
+                            >
+                                Phường/Xã
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
                                 checked={columnVisibility.role}
                                 onCheckedChange={() => toggleColumnVisibility('role')}
                             >
@@ -667,7 +737,18 @@ export function UnionTable() {
                     </Dialog>
                     {selected.length > 0 && (
                         <Button variant="destructive" onClick={confirmMultiDelete}>
-                            Xóa đã chọn ({selected.length})
+                            Xoá đã chọn ({selected.length})
+                        </Button>
+                    )}
+                    {users.length > 0 && selected.length === 0 && (
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                setDeletingAllConfirm(true);
+                            }}
+                        >
+                            <Trash className="h-4 w-4 mr-2" />
+                            Xóa tất cả
                         </Button>
                     )}
                 </div>
@@ -720,6 +801,33 @@ export function UnionTable() {
                                 <DropdownMenuItem onClick={() => handleFilterChange("type", "PNN")}>
                                     Phi nông nghiệp
                                 </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Phường/Xã</label>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    {filters.wardId ? (
+                                        wardMap.get(Number(filters.wardId)) || "Không xác định"
+                                    ) : "Tất cả"}
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="max-h-60 overflow-y-auto">
+                                <DropdownMenuItem onClick={() => handleFilterChange("wardId", "")}>
+                                    Tất cả
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {wards.map((ward) => (
+                                    <DropdownMenuItem
+                                        key={ward.Id}
+                                        onClick={() => handleFilterChange("wardId", ward.Id.toString())}
+                                    >
+                                        {ward.Name}
+                                    </DropdownMenuItem>
+                                ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -811,6 +919,18 @@ export function UnionTable() {
                                 </Button>
                             </TableHead>
                         )}
+                        {columnVisibility.ward && (
+                            <TableHead>
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleWardSort}
+                                    className="flex items-center space-x-1"
+                                >
+                                    <span>Phường/Xã</span>
+                                    <ArrowUpDown className="h-4 w-4" />
+                                </Button>
+                            </TableHead>
+                        )}
                         {columnVisibility.role && (
                             <TableHead>
                                 <Button
@@ -870,7 +990,14 @@ export function UnionTable() {
                         </TableRow>
                     ) : (
                         filteredUsers.map((user) => (
-                            <TableRow key={user.Id}>
+                            <TableRow
+                                key={user.Id}
+                                className="cursor-pointer hover:bg-gray-50"
+                                onClick={() => {
+                                    setViewingUser(user);
+                                    setIsViewOpen(true);
+                                }}
+                            >
                                 <TableCell>
                                     <input
                                         type="checkbox"
@@ -880,7 +1007,7 @@ export function UnionTable() {
                                         title={`Chọn ${user.Username}`}
                                     />
                                 </TableCell>
-                                <TableCell>
+                                <TableCell onClick={(e) => e.stopPropagation()}>
                                     <div className="flex space-x-1">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -907,16 +1034,6 @@ export function UnionTable() {
                                                     <Trash className="mr-2 h-4 w-4" />
                                                     Xóa
                                                 </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    onClick={() => {
-                                                        setViewingUser(user);
-                                                        setIsViewOpen(true);
-                                                    }}
-                                                >
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    Xem chi tiết
-                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -924,6 +1041,11 @@ export function UnionTable() {
                                 {columnVisibility.username && <TableCell>{user.Username}</TableCell>}
                                 {columnVisibility.organizationName && <TableCell>{user.OrganizationName}</TableCell>}
                                 {columnVisibility.name && <TableCell>{user.Name}</TableCell>}
+                                {columnVisibility.ward && (
+                                    <TableCell>
+                                        {wardMap.get(user.WardId || 0) || "-"}
+                                    </TableCell>
+                                )}
                                 {columnVisibility.role && <TableCell>{user.Role}</TableCell>}
                                 {columnVisibility.email && <TableCell>{user.Email || "-"}</TableCell>}
                                 {columnVisibility.type && <TableCell>{user.Type}</TableCell>}
@@ -1056,6 +1178,12 @@ export function UnionTable() {
                                 </span>
                             </div>
                             <div className="grid grid-cols-3 items-center gap-4">
+                                <span className="font-medium">Phường/Xã:</span>
+                                <span className="col-span-2">
+                                    {wardMap.get(viewingUser.WardId || 0) || "Chưa có thông tin"}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-3 items-center gap-4">
                                 <span className="font-medium">Địa chỉ:</span>
                                 <span className="col-span-2">{viewingUser.Address}</span>
                             </div>
@@ -1169,6 +1297,33 @@ export function UnionTable() {
                 </DialogContent>
             </Dialog>
 
+            {/* Delete All Confirmation Dialog */}
+            <Dialog open={deletingAllConfirm} onOpenChange={setDeletingAllConfirm}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận xóa tất cả</DialogTitle>
+                        <DialogDescription>
+                            Bạn có chắc chắn muốn xóa tất cả {users.length} HTX/QTD?
+                            Hành động này không thể hoàn tác.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeletingAllConfirm(false)}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteAll}
+                        >
+                            Xóa tất cả
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Import Dialog */}
             <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
@@ -1220,7 +1375,9 @@ export function UnionTable() {
                                                 <li key={rowIndex}>
                                                     Dòng {Number(rowIndex) + 2}: {" "}
                                                     {Object.entries(errors).map(([field, error]) => (
-                                                        <span key={field}>{field} - {error}; </span>
+                                                        <span key={field}>
+                                                            {field} - {error}{field !== Object.keys(errors).slice(-1)[0] ? '; ' : ''}
+                                                        </span>
                                                     ))}
                                                 </li>
                                             ))}

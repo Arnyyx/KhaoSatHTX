@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     ColumnDef,
     flexRender,
@@ -26,15 +26,27 @@ import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { UserForm } from './UserForm';
 import { DeleteDialog } from './DeleteDialog';
 import { ExportButton } from './ExportButton';
 import { userService, provinceService, wardService } from '@/lib/api';
 import { User, UserResponse, Province, Ward } from '@/types/user';
-import { ArrowUpDown, ChevronDown, Filter } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Download, FileSpreadsheet, Filter, Upload, X, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,6 +57,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { excelUtils } from '@/lib/excel-utils';
+import * as XLSX from 'xlsx';
 
 export function UserTable() {
     const [data, setData] = useState<User[]>([]);
@@ -74,6 +88,14 @@ export function UserTable() {
     // Province and Ward data for filters
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [wards, setWards] = useState<Ward[]>([]);
+    
+    // Excel import state
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [importData, setImportData] = useState<any[]>([]);
+    const [importErrors, setImportErrors] = useState<Record<number, Record<string, string>>>({});
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleEditUser = (user: User) => {
         setEditingUser(user); // Cập nhật editingUser trước
@@ -155,6 +177,149 @@ export function UserTable() {
         setIsMemberFilter(undefined);
     };
 
+    // Function to export data to Excel
+    const exportToExcel = () => {
+        try {
+            const filteredUsers = data.filter(user => {
+                if (roleFilter && user.Role !== roleFilter) return false;
+                if (typeFilter && user.Type !== typeFilter) return false;
+                if (statusFilter && (user.Status?.toString() !== statusFilter)) return false;
+                if (provinceFilter && user.ProvinceId !== provinceFilter) return false;
+                if (wardFilter && user.WardId !== wardFilter) return false;
+                if (isMemberFilter && (user.IsMember?.toString() !== isMemberFilter)) return false;
+                return true;
+            });
+
+            excelUtils.exportUsersToExcel(filteredUsers, provinces, wards);
+
+            toast.success("Xuất dữ liệu thành công", {
+                description: `Đã xuất ${filteredUsers.length} bản ghi`
+            });
+        } catch (error: any) {
+            console.error("Lỗi khi xuất Excel:", error);
+            toast.error("Lỗi khi xuất dữ liệu", {
+                description: error.message,
+            });
+        }
+    };
+
+    // Function to handle file selection
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImportFile(file);
+            parseExcelFile(file);
+        }
+    };
+
+    // Function to parse Excel file
+    const parseExcelFile = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                if (!data) {
+                    toast.error("Không thể đọc dữ liệu từ file");
+                    return;
+                }
+
+                const parsedData = excelUtils.parseExcelFile(data);
+                if (!parsedData || parsedData.length === 0) {
+                    toast.error("File không chứa dữ liệu hợp lệ");
+                    return;
+                }
+
+                setImportData(parsedData);
+                validateImportData(parsedData);
+            } catch (error) {
+                console.error("Lỗi khi đọc file Excel:", error);
+                toast.error("Lỗi khi đọc file Excel");
+            }
+        };
+        reader.onerror = () => {
+            toast.error("Lỗi khi đọc file");
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    // Function to validate import data
+    const validateImportData = (data: any[]) => {
+        // This should be implemented with proper validation
+        const errors = excelUtils.validateUserImportData(data);
+        setImportErrors(errors);
+    };
+
+    // Function to handle import
+    const handleImport = async () => {
+        if (!importFile) {
+            toast.error("Vui lòng chọn file Excel");
+            return;
+        }
+
+        if (Object.keys(importErrors).length > 0) {
+            toast.error("Dữ liệu nhập không hợp lệ. Vui lòng kiểm tra lại.");
+            return;
+        }
+
+        if (importData.length === 0) {
+            toast.error("Không có dữ liệu để nhập");
+            return;
+        }
+
+        try {
+            setIsImporting(true);
+
+            try {
+                // Call API to import data, sending the original file
+                const response = await userService.importUsers(importFile);
+
+                toast.success("Nhập dữ liệu thành công", {
+                    description: "File đã được tải lên và đang được xử lý"
+                });
+
+                // Reset import state
+                setImportFile(null);
+                setImportData([]);
+                setImportErrors({});
+                setIsImportDialogOpen(false);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+
+                // Refresh the data
+                fetchUsers();
+            } catch (error: any) {
+                console.error("API Error Response:", error.response?.data);
+
+                // Show detailed error message if available
+                const errorDetail = error.response?.data?.message || error.response?.data?.error || error.message;
+                toast.error("Lỗi khi nhập dữ liệu", {
+                    description: `${errorDetail}. Vui lòng kiểm tra dữ liệu và thử lại.`
+                });
+            }
+        } catch (error: any) {
+            console.error("Lỗi khi xử lý dữ liệu Excel:", error);
+            toast.error("Lỗi khi xử lý dữ liệu Excel", {
+                description: error.message
+            });
+        } finally {
+            setIsImporting(false);
+        }
+    };
+
+    // Function to download template
+    const downloadTemplate = () => {
+        try {
+            excelUtils.downloadUserTemplate();
+            toast.success("Tải mẫu nhập liệu thành công");
+        } catch (error: any) {
+            console.error("Lỗi khi tải mẫu nhập liệu:", error);
+            toast.error("Lỗi khi tải mẫu nhập liệu", {
+                description: error.message,
+            });
+        }
+    };
+
     // Handle "Select All Pages"
     const handleSelectAllPages = async () => {
         if (selectAllPages) {
@@ -208,7 +373,7 @@ export function UserTable() {
                             setSelectAllPages(false);
                         }
                     }}
-                    aria-label="Select all"
+                    aria-label="Chọn tất cả"
                 />
             ),
             cell: ({ row }) => (
@@ -225,7 +390,7 @@ export function UserTable() {
                             setSelectAllPages(false);
                         }
                     }}
-                    aria-label="Select row"
+                    aria-label="Chọn dòng"
                 />
             ),
             enableSorting: false,
@@ -233,7 +398,7 @@ export function UserTable() {
         },
         {
             accessorKey: 'actions',
-            header: 'Actions',
+            header: 'Thao tác',
             cell: ({ row }) => (
                 <div className="flex space-x-2">
                     <Button
@@ -241,7 +406,7 @@ export function UserTable() {
                         size="sm"
                         onClick={() => handleEditUser(row.original)}
                     >
-                        Edit
+                        Sửa
                     </Button>
                     <Button
                         variant="destructive"
@@ -251,7 +416,7 @@ export function UserTable() {
                             setIsDeleteOpen(true);
                         }}
                     >
-                        Delete
+                        Xóa
                     </Button>
                 </div>
             ),
@@ -265,13 +430,13 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Status
+                    Trạng thái
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
             cell: ({ row }) => (
                 <Badge variant={row.original.Status ? "default" : "destructive"}>
-                    {row.original.Status ? "Active" : "Inactive"}
+                    {row.original.Status ? "Hoạt động" : "Không hoạt động"}
                 </Badge>
             ),
         },
@@ -282,7 +447,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Username
+                    Tên đăng nhập
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -306,10 +471,18 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Role
+                    Vai trò
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
+            cell: ({ row }) => {
+                const role = row.original.Role;
+                return role === "HTX" ? "Hợp tác xã" : 
+                       role === "QTD" ? "Quỹ tín dụng" : 
+                       role === "LMHTX" ? "LMHTX" : 
+                       role === "UBKT" ? "UBKT" : 
+                       role === "admin" ? "Admin" : role;
+            }
         },
         {
             accessorKey: 'Type',
@@ -318,10 +491,15 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Type
+                    Loại hình
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
+            cell: ({ row }) => {
+                const type = row.original.Type;
+                return type === "NN" ? "Nông nghiệp" : 
+                       type === "PNN" ? "Phi nông nghiệp" : type;
+            }
         },
         {
             accessorKey: 'OrganizationName',
@@ -330,7 +508,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Organization Name
+                    Tên tổ chức
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -342,7 +520,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Manager Name
+                    Người quản lý
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -354,7 +532,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Position
+                    Chức vụ
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -366,7 +544,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Member Count
+                    Số thành viên
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -378,7 +556,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Established Date
+                    Ngày thành lập
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -402,12 +580,12 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Is Member
+                    Là thành viên
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
             cell: ({ row }) => {
-                return row.original.IsMember ? 'Yes' : 'No';
+                return row.original.IsMember ? 'Có' : 'Không';
             }
         },
         {
@@ -417,7 +595,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Province
+                    Tỉnh/Thành phố
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -429,7 +607,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Ward
+                    Phường/Xã
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -441,7 +619,7 @@ export function UserTable() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                 >
-                    Address
+                    Địa chỉ
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
@@ -486,9 +664,9 @@ export function UserTable() {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                     <Input
-                        placeholder="Search users..."
+                        placeholder="Tìm kiếm người dùng..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="max-w-sm"
@@ -498,16 +676,30 @@ export function UserTable() {
                         onClick={() => setShowFilters(!showFilters)}
                         className="flex items-center"
                     >
-                        <Filter className="mr-2 h-4 w-4" />
-                        {showFilters ? 'Hide Filters' : 'Show Filters'}
+                        {showFilters ? (
+                            <>
+                                <X className="mr-2 h-4 w-4" />
+                                Ẩn bộ lọc
+                            </>
+                        ) : (
+                            <>
+                                <Filter className="mr-2 h-4 w-4" />
+                                Hiện bộ lọc
+                            </>
+                        )}
                     </Button>
+                    
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline">
-                                Columns <ChevronDown className="ml-2 h-4 w-4" />
+                                <Settings className="mr-2 h-4 w-4" />
+                                Cột
+                                <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Hiển thị cột</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
                             {table
                                 .getAllColumns()
                                 .filter((column) => column.getCanHide())
@@ -529,39 +721,134 @@ export function UserTable() {
                         variant={selectAllPages ? 'default' : 'outline'}
                         onClick={handleSelectAllPages}
                     >
-                        {selectAllPages ? 'Deselect All Pages' : 'Select All Pages'}
+                        {selectAllPages ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                     </Button>
-                    <ExportButton selectedIds={selectedRows} />
-                    <Button onClick={() => setIsAddOpen(true)}>Add User</Button>
+                    
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline">
+                                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                Excel
+                                <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onClick={exportToExcel}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Xuất Excel
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsImportDialogOpen(true)}>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Nhập Excel
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={downloadTemplate}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Tải mẫu nhập liệu
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Button onClick={() => setIsAddOpen(true)}>Thêm người dùng</Button>
                     <Button
                         variant="destructive"
                         disabled={selectedRows.length === 0}
                         onClick={() => setIsDeleteOpen(true)}
                     >
-                        Delete Selected
+                        Xóa đã chọn ({selectedRows.length})
                     </Button>
                 </div>
             </div>
 
+            {/* Import Dialog */}
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Nhập dữ liệu người dùng từ Excel</DialogTitle>
+                        <DialogDescription>
+                            Tải lên file Excel chứa dữ liệu người dùng. Đảm bảo file đúng định dạng để tránh lỗi khi nhập.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                        <div className="flex flex-col space-y-2">
+                            <Input
+                                type="file"
+                                accept=".xlsx,.xls"
+                                onChange={handleFileChange}
+                                ref={fileInputRef}
+                            />
+                            {importFile && (
+                                <div className="text-sm">
+                                    <p>File đã chọn: {importFile.name}</p>
+                                    <p>Kích thước: {(importFile.size / 1024).toFixed(2)} KB</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {importData.length > 0 && (
+                            <div>
+                                <p className="text-sm">Số dòng dữ liệu: {importData.length}</p>
+                                {Object.keys(importErrors).length > 0 && (
+                                    <div className="mt-2 text-sm text-red-500">
+                                        <p>Dữ liệu có lỗi:</p>
+                                        <ul className="list-disc pl-5">
+                                            {Object.entries(importErrors).map(([rowIndex, errors]) => (
+                                                <li key={rowIndex}>
+                                                    Dòng {parseInt(rowIndex) + 1}:
+                                                    <ul className="list-disc pl-5">
+                                                        {Object.entries(errors).map(([field, error]) => (
+                                                            <li key={field}>{error}</li>
+                                                        ))}
+                                                    </ul>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={downloadTemplate}
+                            variant="outline"
+                        >
+                            Tải mẫu nhập liệu
+                        </Button>
+                        <Button 
+                            onClick={handleImport} 
+                            disabled={!importFile || Object.keys(importErrors).length > 0 || isImporting}
+                        >
+                            {isImporting ? "Đang nhập..." : "Nhập dữ liệu"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {showFilters && (
-                <Card>
+                <Card className="mt-4">
                     <CardContent className="pt-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="text-sm font-medium">Role</label>
+                                <label className="text-sm font-medium">Vai trò</label>
                                 <Select
                                     value={roleFilter || "all"}
                                     onValueChange={setRoleFilter}
                                     defaultValue="all"
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All Roles" />
+                                        <SelectValue placeholder="Tất cả vai trò" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Roles</SelectItem>
+                                        <SelectItem value="all">Tất cả vai trò</SelectItem>
                                         <SelectItem value="LMHTX">LMHTX</SelectItem>
-                                        <SelectItem value="QTD">QTD</SelectItem>
-                                        <SelectItem value="HTX">HTX</SelectItem>
+                                        <SelectItem value="QTD">Quỹ tín dụng</SelectItem>
+                                        <SelectItem value="HTX">Hợp tác xã</SelectItem>
                                         <SelectItem value="admin">Admin</SelectItem>
                                         <SelectItem value="UBKT">UBKT</SelectItem>
                                     </SelectContent>
@@ -569,43 +856,43 @@ export function UserTable() {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Type</label>
+                                <label className="text-sm font-medium">Loại hình</label>
                                 <Select
                                     value={typeFilter || "all"}
                                     onValueChange={setTypeFilter}
                                     defaultValue="all"
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All Types" />
+                                        <SelectValue placeholder="Tất cả loại hình" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Types</SelectItem>
-                                        <SelectItem value="PNN">PNN</SelectItem>
-                                        <SelectItem value="NN">NN</SelectItem>
+                                        <SelectItem value="all">Tất cả loại hình</SelectItem>
+                                        <SelectItem value="PNN">Phi nông nghiệp</SelectItem>
+                                        <SelectItem value="NN">Nông nghiệp</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Status</label>
+                                <label className="text-sm font-medium">Trạng thái</label>
                                 <Select
                                     value={statusFilter || "all"}
                                     onValueChange={setStatusFilter}
                                     defaultValue="all"
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All Statuses" />
+                                        <SelectValue placeholder="Tất cả trạng thái" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Statuses</SelectItem>
-                                        <SelectItem value="true">Active</SelectItem>
-                                        <SelectItem value="false">Inactive</SelectItem>
+                                        <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                                        <SelectItem value="true">Hoạt động</SelectItem>
+                                        <SelectItem value="false">Không hoạt động</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Province</label>
+                                <label className="text-sm font-medium">Tỉnh/Thành phố</label>
                                 <Select
                                     value={provinceFilter ? provinceFilter.toString() : "all"}
                                     onValueChange={(value) => {
@@ -619,10 +906,10 @@ export function UserTable() {
                                     defaultValue="all"
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All Provinces" />
+                                        <SelectValue placeholder="Tất cả tỉnh/thành phố" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Provinces</SelectItem>
+                                        <SelectItem value="all">Tất cả tỉnh/thành phố</SelectItem>
                                         {provinces.map(province => (
                                             <SelectItem key={province.Id} value={province.Id.toString()}>
                                                 {province.Name}
@@ -633,7 +920,7 @@ export function UserTable() {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Ward</label>
+                                <label className="text-sm font-medium">Phường/Xã</label>
                                 <Select
                                     value={wardFilter ? wardFilter.toString() : "all"}
                                     onValueChange={(value) => {
@@ -647,10 +934,10 @@ export function UserTable() {
                                     disabled={!provinceFilter || wards.length === 0}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder={provinceFilter ? "All Wards" : "Select Province First"} />
+                                        <SelectValue placeholder={provinceFilter ? "Tất cả phường/xã" : "Chọn tỉnh/thành phố trước"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Wards</SelectItem>
+                                        <SelectItem value="all">Tất cả phường/xã</SelectItem>
                                         {wards.map(ward => (
                                             <SelectItem key={ward.Id} value={ward.Id.toString()}>
                                                 {ward.Name}
@@ -661,19 +948,19 @@ export function UserTable() {
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium">Is Member</label>
+                                <label className="text-sm font-medium">Là thành viên</label>
                                 <Select
                                     value={isMemberFilter || "all"}
                                     onValueChange={setIsMemberFilter}
                                     defaultValue="all"
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All" />
+                                        <SelectValue placeholder="Tất cả" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All</SelectItem>
-                                        <SelectItem value="true">Yes</SelectItem>
-                                        <SelectItem value="false">No</SelectItem>
+                                        <SelectItem value="all">Tất cả</SelectItem>
+                                        <SelectItem value="true">Có</SelectItem>
+                                        <SelectItem value="false">Không</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -681,7 +968,7 @@ export function UserTable() {
 
                         <div className="flex justify-end mt-4">
                             <Button variant="outline" onClick={resetFilters}>
-                                Reset Filters
+                                Đặt lại bộ lọc
                             </Button>
                         </div>
                     </CardContent>
@@ -689,7 +976,7 @@ export function UserTable() {
             )}
 
             <div className="text-sm">
-                {selectedCount} of {total} row(s) selected
+                {selectedCount} trên {total} dòng được chọn
             </div>
             <div className="rounded-md border overflow-auto">
                 <div className="min-w-max">
@@ -721,7 +1008,7 @@ export function UserTable() {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={columns.length} className="h-24 text-center">
-                                        No results.
+                                        Không có dữ liệu.
                                     </TableCell>
                                 </TableRow>
                             )}

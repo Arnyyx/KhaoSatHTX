@@ -13,4 +13,3 @@ npm install express sequelize sequelize-cli tedious dotenv multer csv-parse mssq
 run:
 npm install redis, npm install jsonwebtoken
 npm install --save-dev @types/jsonwebtoken
-
