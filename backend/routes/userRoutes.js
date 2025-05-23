@@ -5,6 +5,7 @@ const upload = require("../middleware/upload");
 
 router.get("/", userController.getAllUsers);
 router.get("/province", userController.getUsersByProvince);
+router.get("/check-username", userController.checkUsername);
 router.get("/export_filter/", userController.exportFilteredUser);
 router.get("/survey", userController.getUserBySurvey);
 router.get("/survey/export", userController.exportUsersBySurvey);
@@ -19,6 +20,7 @@ router.post("/logout", userController.logout)
 
 router.put("/:id", userController.updateUser);
 
+router.delete("/bulk", userController.deleteMultipleUsers);
 router.delete("/:id", userController.deleteUser);
 
 module.exports = router;

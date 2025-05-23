@@ -186,7 +186,7 @@ exports.getUsersByProvince = async (req, res) => {
     try {
         const { provinceId, page, limit, search, sortColumn, sortDirection, Role, Type, Status, WardId, IsMember } = req.query;
         const offset = (page - 1) * limit;
-        
+
         // Build the where clause
         let whereClause = {
             ProvinceId: provinceId,
@@ -650,12 +650,67 @@ exports.exportUsers = async (req, res) => {
     }
 };
 
+exports.checkUsername = async (req, res) => {
+    try {
+        const { username } = req.query;
+
+        if (!username) {
+            return res.status(400).json({
+                message: "Username is required",
+                exists: false
+            });
+        }
+
+        const user = await User.findOne({
+            where: { Username: username }
+        });
+
+        return res.status(200).json({
+            exists: !!user
+        });
+    } catch (error) {
+        console.error("Error checking username:", error);
+        return res.status(500).json({
+            message: "Error checking username",
+            error: error.message,
+            exists: false
+        });
+    }
+};
 
 exports.importUsers = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: "Vui lòng tải lên file Excel" });
         }
+
+        let currentUserId;
+
+        if (req.cookies && req.cookies.ID_user) {
+            currentUserId = req.cookies.ID_user;
+        }
+        else if (req.headers.authorization) {
+            const token = req.headers.authorization.split(' ')[1];
+            try {
+                const decoded = jwt.verify(token, process.env.SECRET_KEY);
+                currentUserId = decoded.id;
+            } catch (err) {
+                console.error("Token verification failed:", err);
+                return res.status(401).json({ message: "Token không hợp lệ" });
+            }
+        }
+        else if (req.body.userId) {
+            currentUserId = req.body.userId;
+        }
+        else {
+            return res.status(401).json({ message: "Không thể xác định người dùng" });
+        }
+
+        const currentUser = await User.findByPk(currentUserId);
+        if (!currentUser || !currentUser.ProvinceId) {
+            return res.status(400).json({ message: "Người dùng không hợp lệ hoặc không có ProvinceId" });
+        }
+
 
         const workbook = XLSX.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
@@ -674,6 +729,7 @@ exports.importUsers = async (req, res) => {
             });
         }
 
+
         const usersData = data.slice(1).map((row) => {
             const user = {};
             headers.forEach((header, index) => {
@@ -684,11 +740,14 @@ exports.importUsers = async (req, res) => {
             return user;
         });
 
-        const job = await userQueue.add({ usersData });
+        // Process the data immediately instead of using queue
+        const result = await processImportData(usersData, currentUser.ProvinceId);
 
-        res.status(202).json({
-            message: "Đang xử lý file Excel, bạn sẽ nhận kết quả sau",
-            jobId: job.id,
+        res.status(200).json({
+            message: "Xử lý file Excel hoàn tất",
+            created: result.created,
+            errors: result.errors,
+            duplicateUsernames: result.duplicateUsernames
         });
     } catch (error) {
         console.error("Error in importUsers:", error);
@@ -699,18 +758,65 @@ exports.importUsers = async (req, res) => {
     }
 };
 
-
-userQueue.process(async (job) => {
-    console.time(`Job ${job.id}`);
-    const { usersData } = job.data;
+// Helper function to process import data
+async function processImportData(usersData, currentUserProvinceId) {
     const errors = [];
     const createdUsers = [];
+    const duplicateUsernames = [];
     const BATCH_SIZE = 20;
 
     const provinces = await Province.findAll({ attributes: ["Id", "Name"] });
-    const wards = await Ward.findAll({ attributes: ["Id", "Name"] });
-    const provinceMap = new Map(provinces.map((p) => [p.Name, p.Id]));
-    const wardMap = new Map(wards.map((w) => [w.Name, w.Id]));
+    const wards = await Ward.findAll({
+        where: { ProvinceId: currentUserProvinceId },
+        attributes: ["Id", "Name"]
+    });
+    const wardMap = new Map();
+    wards.forEach(ward => {
+        wardMap.set(ward.Name.toLowerCase(), ward.Id);
+    });
+
+    const usernames = usersData.map(row => row.Username);
+    const existingUsers = await User.findAll({
+        where: {
+            Username: usernames
+        },
+        attributes: ['Username']
+    });
+
+    const existingUsernames = new Set(existingUsers.map(user => user.Username));
+
+    for (const row of usersData) {
+        if (existingUsernames.has(row.Username)) {
+            errors.push({
+                row,
+                errors: [`Username "${row.Username}" đã tồn tại trong hệ thống`]
+            });
+            duplicateUsernames.push(row.Username);
+            continue;
+        }
+
+        if (row.Ward && !wardMap.has(row.Ward.toLowerCase())) {
+            errors.push({
+                row,
+                errors: [`Không tìm thấy phường/xã "${row.Ward}" trong hệ thống`]
+            });
+            continue;
+        }
+
+        const validationErrors = validateUserData(row);
+        if (validationErrors.length > 0) {
+            errors.push({ row, errors: validationErrors });
+            continue;
+        }
+    }
+
+    if (errors.length > 0) {
+        return {
+            created: 0,
+            errors,
+            duplicateUsernames
+        };
+    }
 
     for (let i = 0; i < usersData.length; i += BATCH_SIZE) {
         const batch = usersData.slice(i, i + BATCH_SIZE);
@@ -718,28 +824,22 @@ userQueue.process(async (job) => {
         await sequelize.transaction(async (t) => {
             for (const row of batch) {
                 try {
-                    const validationErrors = validateUserData(row);
-                    if (validationErrors.length > 0) {
-                        errors.push({ row, errors: validationErrors });
-                        continue;
-                    }
-
                     const userData = {
                         Username: row.Username,
                         Password: row.Password,
                         OrganizationName: row.OrganizationName,
                         Name: row.Name,
                         Role: row.Role,
-                        Email: row.Email,
+                        Email: row.Email || "",
                         Type: row.Type,
-                        ProvinceId: row.Province ? provinceMap.get(row.Province) : null,
-                        WardId: row.Ward ? wardMap.get(row.Ward) : null,
+                        ProvinceId: currentUserProvinceId,
+                        WardId: row.Ward ? wardMap.get(row.Ward.toLowerCase()) : null,
                         Address: row.Address,
                         Position: row.Position,
                         MemberCount: row.MemberCount ? parseInt(row.MemberCount) : null,
                         EstablishedDate: parseDateFromDDMMYYYY(row.EstablishedDate),
-                        IsMember: row.IsMember,
-                        Status: row.Status === "true" || row.Status === true,
+                        IsMember: row.IsMember === "true" || row.IsMember === "Có" || row.IsMember === true || row.IsMember === "1" || row.IsMember === 1,
+                        Status: row.Status === "true" || row.Status === "Hoạt động" || row.Status === true,
                         IsLocked: row.IsLocked === "true" || row.IsLocked === true,
                         SurveyStatus: row.SurveyStatus === "true" || row.SurveyStatus === true,
                         SurveyTime: row.SurveyTime ? parseInt(row.SurveyTime) : null,
@@ -754,11 +854,12 @@ userQueue.process(async (job) => {
         });
     }
 
-    console.timeEnd(`Job ${job.id}`);
-    console.log(`Processed job ${job.id}: ${createdUsers.length} users created, ${errors.length} errors`);
-
-    return { created: createdUsers.length, errors };
-});
+    return {
+        created: createdUsers.length,
+        errors,
+        duplicateUsernames
+    };
+}
 
 exports.exportUsersBySurvey = async (req, res) => {
     try {
@@ -870,5 +971,35 @@ exports.getTotalUsersByMemberStatus = async (req, res) => {
     } catch (error) {
         console.error("Error in getTotalUsersByMemberStatus:", error);
         res.status(400).json({ message: "Lỗi khi lấy tổng số người dùng", error: error.message });
+    }
+}
+exports.deleteMultipleUsers = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: "Danh sách ID không hợp lệ" });
+        }
+
+        const deleted = await User.destroy({
+            where: {
+                Id: ids
+            }
+        });
+
+        if (deleted > 0) {
+            res.status(200).json({
+                message: `Đã xóa thành công ${deleted} người dùng`,
+                deletedCount: deleted
+            });
+        } else {
+            res.status(404).json({ message: "Không tìm thấy người dùng nào để xóa" });
+        }
+    } catch (error) {
+        console.error("Error in deleteMultipleUsers:", error);
+        res.status(400).json({
+            message: "Lỗi khi xóa nhiều người dùng",
+            error: error.message
+        });
     }
 };

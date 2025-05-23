@@ -3,7 +3,7 @@
 import { login } from '@/app/apis/login';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
@@ -20,14 +20,9 @@ export default function LoginPage() {
     const userRole = Cookies.get("userRole");
 
     if (token && userRole) {
-      // Redirect based on role
-      if (userRole === 'admin') {
-        router.push("/admin");
-      } else if (userRole === 'LMHTX') {
-        router.push("/union");
-      } else if (['HTX', 'QTD'].includes(userRole)) {
-        router.push("/profile");
-      }
+      if (userRole === 'admin') router.push("/admin");
+      else if (userRole === 'LMHTX') router.push("/union");
+      else if (['HTX', 'QTD'].includes(userRole)) router.push("/profile");
     }
   }, [router]);
 
@@ -43,20 +38,15 @@ export default function LoginPage() {
       const data = await login(username, password);
 
       if (data.success && data.user.Id && data.user.Role) {
-        // Set cookies
         Cookies.set("token", data.token, { expires: 1 });
         Cookies.set("userRole", data.user.Role, { expires: 1 });
         Cookies.set("userId", data.user.Id.toString(), { expires: 1 });
 
         toast.success("Đăng nhập thành công");
 
-        if (data.user.Role === 'admin') {
-          router.push("/admin");
-        } else if (data.user.Role === 'LMHTX') {
-          router.push("/union");
-        } else if (['HTX', 'QTD'].includes(data.user.Role)) {
-          router.push("/profile");
-        }
+        if (data.user.Role === 'admin') router.push("/admin");
+        else if (data.user.Role === 'LMHTX') router.push("/union");
+        else if (['HTX', 'QTD'].includes(data.user.Role)) router.push("/profile");
       } else {
         toast.error(data.message || "Đăng nhập thất bại");
       }
@@ -68,11 +58,11 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-muted px-4">
-      <Card className="w-full max-w-md shadow-lg border border-border">
+    <main className="min-h-screen flex items-center justify-center bg-muted px-4" style={{position: 'relative'}} >
+      <Card className="w-full max-w-md shadow-lg border border-border" style={{position: 'absolute',top: '70px',}} >
         <CardHeader className="text-center space-y-1">
-          <CardTitle className="text-2xl font-bold text-primary">Xin chào</CardTitle>
-          <CardDescription>Vui lòng đăng nhập để tiếp tục</CardDescription>
+          <CardTitle className="text-2xl font-bold text-primary">Đăng nhập - Ủy ban kiểm tra Liên Minh HTX Việt Nam</CardTitle>
+          
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -95,13 +85,19 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             </div>
+            <div className="d-flex justify-content-between login">
             <Button
               type="submit"
-              className="w-full bg-primary text-white hover:bg-primary/90 transition"
+              className=" w-50  text-white hover:bg-intro/90 transition fas fa-sign-in-alt me-2"
               disabled={isLoading}
             >
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
+           <Button className=" w-50">
+              <a href="/">Trang Chủ</a>
+            </Button>
+          </div>
+            
           </form>
         </CardContent>
       </Card>

@@ -21,11 +21,11 @@ export function DeleteDialog({ open, onOpenChange, userIds, onSuccess }: DeleteD
             } else {
                 await userService.deleteMultipleUsers(userIds);
             }
-            toast.success('User(s) deleted successfully');
+            toast.success('Xóa người dùng thành công');
             onSuccess();
             onOpenChange(false);
         } catch (error) {
-            toast.error('Failed to delete user(s)');
+            toast.error('Lỗi khi xóa người dùng');
         }
     };
 
@@ -33,17 +33,17 @@ export function DeleteDialog({ open, onOpenChange, userIds, onSuccess }: DeleteD
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Confirm Deletion</DialogTitle>
+                    <DialogTitle>Xác nhận xóa</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete {userIds.length} user(s)? This action cannot be undone.
+                        Bạn có chắc chắn muốn xóa {userIds.length} người dùng? Hành động này không thể hoàn tác.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
+                        Hủy
                     </Button>
                     <Button type="button" variant="destructive" onClick={handleDelete}>
-                        Delete
+                        Xóa
                     </Button>
                 </DialogFooter>
             </DialogContent>

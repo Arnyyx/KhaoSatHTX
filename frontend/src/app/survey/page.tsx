@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API } from "@/lib/api"
+import { API } from "@/lib/api";
 import Cookies from "js-cookie";
 
 interface Survey {
@@ -34,8 +34,6 @@ export default function SurveyPage() {
 
   useEffect(() => {
     const ID_user = Cookies.get("ID_user");
-    console.log("🔍 Cookie ID_user tại SurveyPage:", ID_user);
-
     if (!ID_user) {
       setError("Không tìm thấy ID người dùng.");
       setLoading(false);
@@ -131,21 +129,35 @@ export default function SurveyPage() {
   }
 
   return (
-    <div className="p-4 max-w-xl mx-auto bg-white shadow-md rounded-xl">
+    <div className="p-4 max-w-6xl mx-auto bg-white shadow-md rounded-xl">
       <h1 className="text-2xl font-bold mb-4 text-blue-600">Khảo sát</h1>
       <p><strong>Tiêu đề:</strong> {survey?.Title}</p>
       <p><strong>Mô tả:</strong> {survey?.Description}</p>
       <p><strong>Trạng thái:</strong> {survey?.Status === "true" ? "Đang mở" : "Đã đóng"}</p>
 
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-4">Câu hỏi khảo sát</h2>
-        {questions.length > 0 ? (
-          questions.map((q) => (
-            <div key={q.Id} className="mb-4">
-              <p className="font-medium">{q.QuestionContent}</p>
-              <div className="mt-2 space-x-4">
-                {Object.keys(answerValueMap).map((option) => (
-                  <label key={option}>
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-full border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th rowSpan={2} className="border border-gray-300 p-2 text-center w-12">TT</th>
+              <th rowSpan={2} className="border border-gray-300 p-2 text-center">Câu hỏi về mức độ hài lòng của hợp tác xã</th>
+              <th colSpan={3} className="border border-gray-300 p-2 text-center">Mức độ hài lòng hợp tác xã đánh giá</th>
+            </tr>
+            <tr className="bg-gray-100">
+              {Object.keys(answerValueMap).map((label, idx) => (
+                <th key={idx} className="border border-gray-300 p-2 text-center w-32">
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {questions.map((q, index) => (
+              <tr key={q.Id} className="align-top">
+                <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
+                <td className="border border-gray-300 p-2 whitespace-pre-wrap">{q.QuestionContent}</td>
+                {Object.keys(answerValueMap).map((option, idx) => (
+                  <td key={idx} className="border border-gray-300 text-center">
                     <input
                       type="radio"
                       name={`question-${q.Id}`}
@@ -154,17 +166,13 @@ export default function SurveyPage() {
                       onChange={() =>
                         setAnswers((prev) => ({ ...prev, [q.Id]: option }))
                       }
-                      className="mr-1"
                     />
-                    {option}
-                  </label>
+                  </td>
                 ))}
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-500">Không có câu hỏi nào cho khảo sát này.</p>
-        )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <p className="mt-6 text-sm text-red-600 font-medium">

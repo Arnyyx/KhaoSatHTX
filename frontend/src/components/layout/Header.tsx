@@ -88,82 +88,102 @@ export function Header() {
     };
 
     return (
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-            <div className="container flex h-16 items-center justify-around">
-                <div className="flex items-center gap-8">
-                    <Button
-                        variant="ghost"
-                        className="p-0 hover:bg-transparent"
-                        onClick={() => router.push("/")}
-                    >
-                        <Image
-                            src="/logo.png"
-                            alt="HTX Survey Logo"
-                            width={40}
-                            height={40}
-                            className="mr-2"
-                        />
-                        <span className="text-lg font-bold hover:text-accent-foreground transition-colors">
-                            HTX Survey
-                        </span>
-                    </Button>
-                    {userRole && (
-                        <nav className="flex items-center gap-2">
-                            {getNavigationItems().map((item) => (
-                                <Button
-                                    key={item.href}
-                                    variant="ghost"
-                                    className="text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
-                                    onClick={() => router.push(item.href)}
-                                >
-                                    {item.label}
-                                </Button>
-                            ))}
-                        </nav>
-                    )}
+  <div className="header-area">
+    <div style={{ backgroundColor: "#b3e5fc" }}>
+      <div className="header-mid gray-bg menu-wrapper">
+        <div className="row">
+          <div className="row d-flex align-items-center">
+            <div className="col-md-12">
+              <div
+                style={{
+                  width: "1250px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "6px 20px",
+                  fontSize: "16px",
+                  color: "#1a237e",
+                  margin: "0 auto",
+                  fontWeight: 500,
+                }}
+              >
+                <div>Trang thông tin Khảo sát Chỉ số hài lòng cấp tỉnh năm 2024</div>
+                <div>
+                  <i className="fas fa-phone-alt" style={{ marginRight: 6 }}></i>
+                  (+84) 123 456 789
                 </div>
-                <div className="flex items-center gap-4">
-                    {userRole ? (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
-                                >
-                                    <User className="h-5 w-5" />
-                                    <span className="sr-only">Tài khoản</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel className="font-medium">Tài khoản</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={() => router.push("/profile")}
-                                    className="cursor-pointer hover:bg-accent"
-                                >
-                                    Thông tin cá nhân
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={handleLogout}
-                                    className="cursor-pointer hover:bg-accent"
-                                >
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    Đăng xuất
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    ) : (
-                        <Button
-                            variant="default"
-                            className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                            onClick={() => router.push("/login")}
-                        >
-                            Đăng nhập
-                        </Button>
-                    )}
-                </div>
+              </div>
             </div>
-        </header>
-    );
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="header-bottom header-sticky">
+      <div className="menu-wrapper">
+        <div className="container content-wrapper">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 20px",
+              backgroundColor: "#fff",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <img
+                src="/assets/img/logo ubkt.svg"
+                alt="Logo"
+                style={{ width: "auto", height: "80px" }}
+              />
+            </div>
+
+            <nav
+              style={{
+                display: "flex",
+                gap: "24px",
+                fontSize: "18px",
+                fontWeight: 500,
+              }}
+            >
+              <a
+                href="/"
+                style={{
+                  color: "#e53935",
+                  textDecoration: "none",
+                  position: "relative",
+                }}
+              >
+                TRANG CHỦ
+                <div
+                  style={{
+                    height: "4px",
+                    backgroundColor: "#2b2d80",
+                    width: "100%",
+                    position: "absolute",
+                    bottom: -10,
+                  }}
+                />
+              </a>
+              <a href="/intro"  style={{ color: "#000", textDecoration: "none" }}   >
+                GIỚI THIỆU
+              </a>
+              <a href="/survey" style={{ color: "#000", textDecoration: "none" }}>
+                KHẢO SÁT
+              </a>
+              <a href="/news" style={{ color: "#000", textDecoration: "none" }}>
+                TIN TỨC
+              </a>
+              <a href="/report" style={{ color: "#000", textDecoration: "none" }}>
+                BÁO CÁO
+              </a>
+              <a href="/login">ĐĂNG NHẬP</a>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 }
