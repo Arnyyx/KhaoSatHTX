@@ -19,10 +19,12 @@ router.get('/users_num', provincesController.getProvincesUsersNum);
 // });
 
 router.get('/', provincesController.getAllProvinces);
+router.get('/survey-stats', provincesController.getProvinceSurveyStatsByYear);
 router.post('/', provincesController.insertProvince);
 router.post('/sua', provincesController.updateProvince);
 router.delete('/', provincesController.deleteProvince);
 router.get('/export', provincesController.exportProvinces);
+router.post('/export-dynamic', provincesController.exportDynamicExcel);
 router.post('/import', upload.single('file'), provincesController.importProvinces);
 
 module.exports = router;

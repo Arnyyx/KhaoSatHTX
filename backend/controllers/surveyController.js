@@ -5,31 +5,69 @@ const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const { Op } = require("sequelize");
 const sequelize = require("../config/database");
+const ExcelJS = require('exceljs');
 
+exports.getSurveysYears = async (req, res) => { 
+    try {
+        const years = await sequelize.query(
+            "SELECT DISTINCT YEAR(StartTime) AS year FROM Surveys WHERE StartTime IS NOT NULL ORDER BY year ASC",
+            { type: sequelize.QueryTypes.SELECT }
+        );
+        res.status(200).json(years);
+    } catch (error) {
+        res.status(400).json({ message: "Lỗi khi lấy survey", error: error.message });
+    }
+}
 exports.getSurveysProgress = async (req, res) => { 
     try {
-        const survey = await sequelize.query(`
-            SELECT *, 
-            (select count(Users.Id) from Users, SurveyAccessRules, UserSurveyStatus
-            Where Users.Role = SurveyAccessRules.Role
-            AND Users.Type = SurveyAccessRules.Type
-			AND Users.Id = UserSurveyStatus.UserId
-            AND SurveyAccessRules.SurveyId = Surveys.Id
-            AND FinishedTime is not null) as finishedNum,
-            (select count(Users.Id) from Users, SurveyAccessRules
-            Where Users.Role = SurveyAccessRules.Role
-            AND Users.Type = SurveyAccessRules.Type
-            AND SurveyId = Surveys.Id) as totalNum
-            from Surveys
-            Where Surveys.Status = 1
-          `, { type: sequelize.QueryTypes.SELECT });
-        if (survey) {
-            res.status(200).json({ message: "Lấy survey thành công", survey });
-        } else {
-            res.status(400).json({ message: "Không tìm thấy survey" });
+        const { id, year, is_member } = req.query;
+
+        if (!id && !year) {
+            return res.status(400).json({ message: "Cần truyền 'id' hoặc 'year'" });
         }
+
+        const whereClause = id 
+            ? `Surveys.Id = ${id}` 
+            : `YEAR(Surveys.StartTime) = ${year}`;
+
+        const is_member_value = is_member ? is_member === 'true' ? `AND Users.IsMember = 1` : `AND Users.IsMember = 0` : '';
+
+        const surveys = await sequelize.query(`
+            SELECT 
+                Surveys.*, Role, Type,
+                COUNT(DISTINCT Questions.Id) AS QuestionCount,
+                -- Tổng số người cần khảo sát
+                (
+                    SELECT COUNT(DISTINCT Users.Id)
+                    FROM Users
+                    JOIN SurveyAccessRules ON Users.Role = SurveyAccessRules.Role AND Users.Type = SurveyAccessRules.Type
+                    WHERE Users.Role IN ('HTX', 'QTD') 
+                    AND SurveyAccessRules.SurveyId = Surveys.Id
+                    ${is_member_value}
+                ) AS totalNum,
+                -- Số người đã hoàn thành khảo sát
+                (
+                    SELECT COUNT(DISTINCT Users.Id)
+                    FROM Users
+                    JOIN SurveyAccessRules ON Users.Role = SurveyAccessRules.Role AND Users.Type = SurveyAccessRules.Type
+                    JOIN UserSurveyStatus ON Users.Id = UserSurveyStatus.UserId
+                    WHERE Users.Role IN ('HTX', 'QTD') 
+                    AND SurveyAccessRules.SurveyId = Surveys.Id
+                    AND UserSurveyStatus.SurveyId = Surveys.Id
+                    AND UserSurveyStatus.SurveyTime IS NOT NULL
+                    ${is_member_value}
+                ) AS finishedNum
+            FROM Surveys
+            LEFT JOIN Questions ON Questions.SurveyId = Surveys.Id
+			LEFT JOIN SurveyAccessRules ON Surveys.Id = SurveyAccessRules.SurveyId
+            WHERE Surveys.Status = 1 AND ${whereClause}
+            GROUP BY Surveys.Id, Surveys.Title, Surveys.Description, Surveys.StartTime, Surveys.EndTime, Surveys.Status, Role, Type
+            ORDER BY Surveys.Id ASC
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        res.status(200).json({ message: "Lấy danh sách khảo sát thành công", surveys });
     } catch (error) {
-        console.error("Error in getSurveysProgress:", error);
+        console.error("Error in getSurveys:", error);
         res.status(400).json({ message: "Lỗi khi lấy survey", error: error.message });
     }
 }
@@ -261,5 +299,146 @@ exports.bulkCreateSurveys = async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({ message: "Lỗi khi xử lý file", error: error.message });
+    }
+};
+
+exports.exportSurveysProgress = async (req, res) => {
+    try {
+        const { year } = req.query;
+
+        if (!year) {
+            return res.status(400).json({ message: "Cần truyền 'year'" });
+        }
+
+        const surveys = await sequelize.query(`
+            SELECT 
+                Surveys.*, Role, Type,
+                COUNT(DISTINCT Questions.Id) AS QuestionCount,
+                (
+                    SELECT COUNT(DISTINCT Users.Id)
+                    FROM Users
+                    JOIN SurveyAccessRules ON Users.Role = SurveyAccessRules.Role AND Users.Type = SurveyAccessRules.Type
+                    WHERE Users.Role IN ('HTX', 'QTD') 
+                    AND SurveyAccessRules.SurveyId = Surveys.Id
+                ) AS totalNum,
+                (
+                    SELECT COUNT(DISTINCT Users.Id)
+                    FROM Users
+                    JOIN SurveyAccessRules ON Users.Role = SurveyAccessRules.Role AND Users.Type = SurveyAccessRules.Type
+                    JOIN UserSurveyStatus ON Users.Id = UserSurveyStatus.UserId
+                    WHERE Users.Role IN ('HTX', 'QTD') 
+                    AND SurveyAccessRules.SurveyId = Surveys.Id
+                    AND UserSurveyStatus.SurveyId = Surveys.Id
+                    AND UserSurveyStatus.SurveyTime IS NOT NULL
+                ) AS finishedNum
+            FROM Surveys
+            LEFT JOIN Questions ON Questions.SurveyId = Surveys.Id
+            LEFT JOIN SurveyAccessRules ON Surveys.Id = SurveyAccessRules.SurveyId
+            WHERE Surveys.Status = 1 AND YEAR(Surveys.StartTime) = ${year}
+            GROUP BY Surveys.Id, Surveys.Title, Surveys.Description, Surveys.StartTime, Surveys.EndTime, Surveys.Status, Role, Type
+            ORDER BY Surveys.Id ASC
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Tiến độ khảo sát');
+
+        // Add headers
+        worksheet.columns = [
+            { header: 'Tên khảo sát', key: 'Title', width: 30 },
+            { header: 'Mô tả', key: 'Description', width: 40 },
+            { header: 'Thời gian bắt đầu', key: 'StartTime', width: 20 },
+            { header: 'Thời gian kết thúc', key: 'EndTime', width: 20 },
+            { header: 'Số câu hỏi', key: 'QuestionCount', width: 15 },
+            { header: 'Số người đã hoàn thành', key: 'finishedNum', width: 20 },
+            { header: 'Tổng số người', key: 'totalNum', width: 15 },
+            { header: 'Tỷ lệ hoàn thành (%)', key: 'completionRate', width: 20 }
+        ];
+
+        // Add data rows
+        surveys.forEach(survey => {
+            worksheet.addRow({
+                ...survey,
+                completionRate: ((survey.finishedNum / survey.totalNum) * 100).toFixed(2) + '%'
+            });
+        });
+
+        // Style the header row
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=survey-progress-${year}.xlsx`);
+
+        // Write to response
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error("Error in exportSurveysProgress:", error);
+        res.status(400).json({ message: "Lỗi khi xuất file Excel", error: error.message });
+    }
+};
+
+exports.getQuestionAnswerStats = async (req, res) => {
+    try {
+        const { year, survey_id, page = 1, limit = 10 } = req.query;
+
+        if (!year && !survey_id) {
+            return res.status(400).json({ message: "Cần truyền 'year' hoặc 'survey_id'" });
+        }
+
+        const whereClause = survey_id 
+            ? `Questions.SurveyId = ${survey_id}` 
+            : `YEAR(Surveys.StartTime) = ${year}`;
+
+        // Get total count
+        const totalResult = await sequelize.query(`
+            SELECT COUNT(DISTINCT Questions.Id) as total
+            FROM Questions
+            JOIN Surveys ON Questions.SurveyId = Surveys.Id
+            WHERE ${whereClause}
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        const total = totalResult[0].total;
+
+        // Get paginated data
+        const stats = await sequelize.query(`
+            SELECT 
+                Questions.Id as QuestionId,
+                Questions.QuestionContent,
+                Surveys.Id as SurveyId,
+                Surveys.Title as SurveyTitle,
+                COUNT(CASE WHEN Results.Answer = 1 THEN 1 END) as NotSatisfied,
+                COUNT(CASE WHEN Results.Answer = 3 THEN 1 END) as PartiallySatisfied,
+                COUNT(CASE WHEN Results.Answer = 5 THEN 1 END) as Satisfied,
+                COUNT(Results.Answer) as TotalAnswers
+            FROM Questions
+            JOIN Surveys ON Questions.SurveyId = Surveys.Id
+            LEFT JOIN Results ON Questions.Id = Results.QuestionId
+            WHERE ${whereClause}
+            GROUP BY Questions.Id, Questions.QuestionContent, Surveys.Id, Surveys.Title
+            ORDER BY Surveys.Id, Questions.Id
+            OFFSET (${page} - 1) * ${limit} ROWS
+            FETCH NEXT ${limit} ROWS ONLY
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        // Calculate percentages
+        const statsWithPercentages = stats.map(stat => ({
+            ...stat,
+            NotSatisfiedPercent: stat.TotalAnswers > 0 ? ((stat.NotSatisfied / stat.TotalAnswers) * 100).toFixed(1) : 0,
+            PartiallySatisfiedPercent: stat.TotalAnswers > 0 ? ((stat.PartiallySatisfied / stat.TotalAnswers) * 100).toFixed(1) : 0,
+            SatisfiedPercent: stat.TotalAnswers > 0 ? ((stat.Satisfied / stat.TotalAnswers) * 100).toFixed(1) : 0
+        }));
+
+        res.status(200).json({ 
+            stats: statsWithPercentages,
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        console.error("Error in getQuestionAnswerStats:", error);
+        res.status(400).json({ message: "Lỗi khi lấy thống kê câu trả lời", error: error.message });
     }
 };

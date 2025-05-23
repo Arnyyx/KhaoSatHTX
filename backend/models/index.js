@@ -6,6 +6,7 @@ const Ward = require("./Ward");
 const SurveyAccessRule = require("./SurveyAccessRule");
 const Result = require("./Result");
 const UserSurveyStatus = require("./UserSurveyStatus");
+const ProvincesTotalPoint = require("./ProvincesTotalPoint");
 
 // Thiết lập mối quan hệ
 Survey.hasMany(Question, {
@@ -92,6 +93,15 @@ UserSurveyStatus.belongsTo(Survey, {
     as: 'Survey'
 });
 
+Province.hasMany(ProvincesTotalPoint, {
+    foreignKey: 'ProvinceId',
+    as: 'ProvincesTotalPoints'
+});
+
+ProvincesTotalPoint.belongsTo(Province, {
+    foreignKey: 'ProvinceId',
+    as: 'Province'
+});
 module.exports = {
     Survey,
     Question,
@@ -100,5 +110,6 @@ module.exports = {
     Ward,
     SurveyAccessRule,
     Result,
-    UserSurveyStatus
+    UserSurveyStatus,
+    ProvincesTotalPoint
 };
