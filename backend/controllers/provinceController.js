@@ -2,7 +2,7 @@
 const Province = require("../models/Province");
 const { parse } = require("csv-parse");
 const { Readable } = require("stream");
-const { Op } = require("sequelize");
+const { Op } = require('sequelize');
 const sequelize = require("../config/database");
 const tableName = 'Provinces';
 const ExcelJS = require('exceljs');
@@ -14,7 +14,7 @@ exports.getProvincesUsersNum = async (req, res) => {
     {
         const provinces = await sequelize.query(`
             SELECT Id, Name, 
-            (SELECT Count(Id) FROM Users WHERE ProvinceId = Provinces.Id) as UsersNum
+            (SELECT Count(Id) FROM Users WHERE ProvinceId = Provinces.Id AND Role in('HTX', 'QTD')) as UsersNum
             FROM Provinces
           `, { type: sequelize.QueryTypes.SELECT });
         if(provinces) {
@@ -29,6 +29,11 @@ exports.getProvincesUsersNum = async (req, res) => {
         console.log('Lỗi tại getProvincesUsersNum', error);
         res.status(400).json({ message: "Lỗi khi lấy Tỉnh", error: error.message });
     }
+};
+exports.getProvinceById = async (req, res) => {
+    const { id } = req.params;
+    const province = await Province.findByPk(id);
+    res.status(200).json({ total: 1, items: [province] });
 };
 exports.getAllProvinces = async (req, res) => {
     try {
@@ -135,6 +140,21 @@ exports.deleteProvince = async (req, res) => {
         res.status(500).send('Database error');
     }
 };
+// exports.getProvincesPoint = async (req, res) => {
+//     try {
+//         const provinces = await sequelize.query(`
+//             SELECT Id, Name, Region, 
+//             (SELECT AVG(Point) FROM Users WHERE ProvinceId = Provinces.Id) as Point
+//             FROM Provinces
+//           `, { type: sequelize.QueryTypes.SELECT });
+//         if(provinces) {
+//             res.status(200).json(provinces)
+//         }
+//         else {
+//             res.status(400).json({message:'Không tìm thấy Tỉnh'})
+//         }
+//     }
+// }
 exports.exportProvinces = async (req, res) => {
     try {
         const provinces = await Province.findAll({
@@ -220,5 +240,129 @@ exports.importProvinces = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send('Import thất bại');
+    }
+};
+
+exports.exportDynamicExcel = async (req, res) => {
+    try {
+        const { columns, data, filename = 'export.xlsx', sheetName = 'Sheet1' } = req.body;
+
+        // Validate request body
+        if (!columns || !Array.isArray(columns) || columns.length === 0) {
+            return res.status(400).json({ message: 'Invalid columns format. Columns must be a non-empty array.' });
+        }
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            return res.status(400).json({ message: 'Invalid data format. Data must be a non-empty array.' });
+        }
+
+        // Create workbook and worksheet
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet(sheetName);
+
+        // Define columns for the Excel sheet
+        worksheet.columns = columns.map(column => ({
+            header: column.header,
+            key: column.key,
+            width: column.width || 20 // Default width if not specified
+        }));
+
+        // Add rows to the worksheet
+        worksheet.addRows(data);
+
+        // Apply styling (optional)
+        worksheet.getRow(1).font = { bold: true };
+        console.log('filename', filename);
+        // Set headers for file download
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        const safeFilename = encodeURIComponent(filename.replace(/[^\w\s.-]/gi, '_'));
+        res.setHeader(
+        'Content-Disposition',
+        `attachment; filename*=UTF-8''${safeFilename}`
+        );
+
+
+        // Write to response
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error('Error in exportDynamicExcel:', err);
+        res.status(500).json({ message: 'Export failed', error: err.message });
+    }
+};
+
+exports.getProvinceSurveyStatsByYear = async (req, res) => {
+    const year = req.query.year || new Date().getFullYear().toString(); // default nếu không truyền
+
+    try {
+        const results = await sequelize.query(`
+            SELECT 
+                P.Id,
+                P.Name,
+                P.Region,
+                TotalPoint,
+                ISNULL(U.TotalUsers, 0) AS TotalUsers,
+                ISNULL(U.TotalMembers, 0) AS TotalMembers,
+                ISNULL(PTP.MembersSurveyed, 0) AS MembersSurveyed,
+                ISNULL(PTP.NonMembersSurveyed, 0) AS NonMembersSurveyed
+            FROM Provinces P
+            LEFT JOIN (
+                SELECT 
+                    ProvinceId,
+                    COUNT(*) AS TotalUsers,
+                    SUM(CASE WHEN IsMember = 1 THEN 1 ELSE 0 END) AS TotalMembers
+                FROM Users
+	            WHERE Users.Role IN('HTX', 'QTD')
+                GROUP BY ProvinceId
+            ) U ON P.Id = U.ProvinceId
+            LEFT JOIN ProvincesTotalPoint PTP 
+                ON P.Id = PTP.ProvinceId AND PTP.Year = ${year}
+        `, { type: sequelize.QueryTypes.SELECT });
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching stats:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+exports.getProvinceRankings = async (req, res) => {
+    try {
+        const results = await sequelize.query(`
+            SELECT 
+                P.Id,
+                P.Name,
+                P.Region,
+                MIN(USS.SurveyTime) as FirstSurveyTime,
+                COUNT(DISTINCT U.Id) as TotalUsers,
+                COUNT(DISTINCT CASE WHEN U.IsMember = 1 THEN U.Id END) as TotalMembers
+            FROM Provinces P
+            LEFT JOIN Users U ON P.Id = U.ProvinceId AND U.Role = 'LMHTX'
+            LEFT JOIN UserSurveyStatus USS ON U.Id = USS.UserId
+            GROUP BY P.Id, P.Name, P.Region
+            ORDER BY FirstSurveyTime ASC
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error("Error in getProvinceRankings:", error);
+        res.status(400).json({ message: "Lỗi khi lấy xếp hạng tỉnh", error: error.message });
+    }
+};
+
+exports.getProvinceSurveyCompletionStats = async (req, res) => {
+    try {
+        const results = await sequelize.query(`
+            SELECT 
+                COUNT(DISTINCT CASE WHEN USS.SurveyTime IS NOT NULL THEN P.Id END) as CompletedProvinces,
+                COUNT(DISTINCT CASE WHEN USS.SurveyTime IS NULL THEN P.Id END) as UncompletedProvinces
+            FROM Provinces P
+            LEFT JOIN Users U ON P.Id = U.ProvinceId AND U.Role = 'LMHTX'
+            LEFT JOIN UserSurveyStatus USS ON U.Id = USS.UserId
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        res.status(200).json(results[0]);
+    } catch (error) {
+        console.error("Error in getProvinceSurveyCompletionStats:", error);
+        res.status(400).json({ message: "Lỗi khi lấy thống kê hoàn thành khảo sát", error: error.message });
     }
 };

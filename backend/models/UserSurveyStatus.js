@@ -34,6 +34,10 @@ const UserSurveyStatus = sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
         },
+        Point: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+        },
     },
     {
         tableName: "UserSurveyStatus",

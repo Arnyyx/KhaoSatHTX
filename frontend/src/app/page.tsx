@@ -12,6 +12,7 @@ const newsItems = [
     description:
       "Căn cứ Kế hoạch số  /KH-BTV ngày  / 2025 của Ban Thường vụ Liên minh Hợp tác xã Việt Nam về việc Khảo sát đánh giá mức độ hài lòng của hợp tác xã (HTX) đối với chính quyền địa phương năm 2024",
     image: "/assets/img/UBKT_2025_TEM-05.jpg",
+    image: "/assets/img/UBKT_2025_TEM-05.jpg",
   },
   {
     title: "TIÊU ĐỀ TIN TỨC",
@@ -66,8 +67,6 @@ export default function HomePage() {
         <title>Hệ thống quản lý HTX</title>
       </Head>
 
-   
-       
 
       <div className="hero-section">
         <div className="hero-content">
@@ -168,20 +167,18 @@ export default function HomePage() {
       </section>
 
 
-
-      
-<div className="bg-gray-100 py-10 px-4 ">
-      <h2 className="text-center text-2xl font-bold  text-center survey   m-5">HƯỚNG DẪN KHẢO SÁT</h2>
-      <div className="flex justify-center items-start  flex-wrap md:flex-nowrap">
-        {steps.map((step) => (
-          <div key={step.id} className="flex flex-col items-center text-center relative survey_instruc">
-            {/* Circle + icon */}
-            <div className="w-28 h-28 rounded-full border-2 border-gray-300 flex flex-col items-center justify-center relative bg-white">
-              <div className="absolute -top-3 -left-3 bg-yellow-400 text-black rounded-full w-6 h-6 text-xs flex items-center justify-center font-bold top-left">
-                {step.id}
+      <div className="bg-gray-100 py-10 px-4 ">
+        <h2 className="text-center text-2xl font-bold  text-center survey   m-5">HƯỚNG DẪN KHẢO SÁT</h2>
+        <div className="flex justify-center items-start  flex-wrap md:flex-nowrap">
+          {steps.map((step) => (
+            <div key={step.id} className="flex flex-col items-center text-center relative survey_instruc">
+              {/* Circle + icon */}
+              <div className="w-28 h-28 rounded-full border-2 border-gray-300 flex flex-col items-center justify-center relative bg-white">
+                <div className="absolute -top-3 -left-3 bg-yellow-400 text-black rounded-full w-6 h-6 text-xs flex items-center justify-center font-bold top-left">
+                  {step.id}
+                </div>
+                {step.icon}
               </div>
-              {step.icon}
-            </div>
 
             {/* Content */}
             <div className="mt-4 max-w-[180px]">
@@ -196,14 +193,14 @@ export default function HomePage() {
               
             </div>
 
-            {/* Line (except last step) */}
-            {step.id < steps.length && (
-              <div className="hidden md:block absolute top-14 right-[-60px] w-[113px] h-0.5 bg-gray-300 z-0"></div>
-            )}
-          </div>
-        ))}
+              {/* Line (except last step) */}
+              {step.id < steps.length && (
+                <div className="hidden md:block absolute top-14 right-[-60px] w-[113px] h-0.5 bg-gray-300 z-0"></div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
 
 <div className="flex flex-col items-center justify-center bg-[#403d94] py-5 px-4 min-h-0">
   <h2 className="text-xl text-white font-bold mb-4">KHẢO SÁT</h2>
@@ -304,6 +301,7 @@ export default function HomePage() {
     </div>
   </>
 )}
+
 
 
 

@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Card } from "@/components/ui/card"; // hoặc thay bằng div nếu chưa có component này
 
-export default function Layout({ children }) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Head>

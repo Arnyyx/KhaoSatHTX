@@ -1,439 +1,453 @@
-"use client"
+    "use client"
 
-import { use, useEffect, useState } from "react"
-import { useMemo } from "react";
-import {
-    Button,
-} from "@/components/ui/button"
-import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell
-} from "recharts"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { API } from "@/lib/api"
-import { all } from "axios";
+    import { use, useEffect, useState } from "react"
+    import { useMemo } from "react";
+    import {
+        BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+        PieChart, Pie, Cell, Legend
+    } from "recharts"
+    import {
+        Table,
+        TableBody,
+        TableCell,
+        TableHead,
+        TableHeader,
+        TableRow,
+    } from "@/components/ui/table";
+    import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+    import { API } from "@/lib/api"
+    import Link from 'next/link'
+    import { Button } from "@/components/ui/button";
+    import { Loader2, RefreshCw } from "lucide-react"
+    import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+    import { AlertCircle } from "lucide-react"
+    import Cookies from "js-cookie";
+    import { useRouter } from "next/navigation";
+    import { toast } from "sonner";
+    type ProvinceInfo = {
+        Id: number
+        Name: string
+        UsersNum: number
+    }
+    type MemberInfo = {
+        members: number
+        nonMembers: number
+    }
+    type ProvinceRanking = {
+        Id: number
+        Name: string
+        Region: string
+        FirstSurveyTime: string
+        TotalUsers: number
+        TotalMembers: number
+    }
+    type ProvinceSurveyStats = {
+        CompletedProvinces: number
+        UncompletedProvinces: number
+    }
 
-type SurveyInfo = {
-    Id: number
-    Title: string
-    Description: string
-    StartTime: string
-    EndTime: string
-    finishedNum: number
-    totalNum: number
-}
-type ProvinceInfo = {
-    Id: number
-    Name: string
-    UsersNum: number
-}
-interface User {
-    Id: number;
-    Username: string;
-    Name: string | null;
-    Email: string;
-    Role: "LMHTX" | "QTD" | "HTX" | "admin" | "UBKT";
-    Status: boolean | null;
-    IsLocked: boolean | null;
-    OrganizationName?: string | null;
-    Type?: "PNN" | "NN";
-    ProvinceId?: number | null;
-    WardId?: number | null;
-    Address?: string | null;
-    Position?: string | null;
-    MemberCount?: number | null;
-    EstablishedDate?: string | null;
-    IsMember?: boolean | null;
-    SurveyStatus?: boolean | null;
-    SurveyTime?: number | null;
-    Province?: { Name: string } | null;
-    Ward?: { Name: string } | null;
-}
-type ValuePair = {
-    Id: number
-    Name: string
-}
-type WardInfo = {
-  Id: number
-  ProvinceId: number
-  Name: string
-}
-export default function DashboardPage() {
-    const [filters, setFilters] = useState<{
-        ProvinceId?: number;
-        WardId?: number;
-        Role?: User["Role"];
-        Type?: User["Type"];
-        SurveyStatus?: boolean;
-    }>({});
-    const [showProvincesAll, setShowProvincesAll] = useState(false);
-    const [showUsersAll, setShowUsersAll] = useState(false);
+    export default function DashboardPage() {
+        const [isLoading, setIsLoading] = useState(true);
+        const [error, setError] = useState<string | null>(null);
+        const [roleInfo, setRoleInfo] = useState<{ name: string, UserNum: number }[]>([]);
+        const [provinceRankings, setProvinceRankings] = useState<ProvinceRanking[]>([]);
+        const [provinceSurveyStats, setProvinceSurveyStats] = useState<ProvinceSurveyStats>({ CompletedProvinces: 0, UncompletedProvinces: 0 });
+        const chartData = useMemo(() => {
+            return roleInfo?.map(survey => ({
+                name: survey.name,
+                UserNum: survey.UserNum,
+            }));
+        }, [roleInfo]);
+        const [showProvincesAll, setShowProvincesAll] = useState(false);
 
-    const [surveysInfoList, setSurveysInfoList] = useState<SurveyInfo[]>([])
-    const [provincesInfoList, setProvincesInfoList] = useState<ProvinceInfo[]>([])
-    const [provincesFilter, setProvincesFilter] = useState<ProvinceInfo[]>([])
-    const [valuePairList, setValuePairList] = useState<ValuePair[]>([])
-    const [valuePairList0, setValuePairList0] = useState<ValuePair[]>([])
-    const [allDistricts, setAllWard] = useState<WardInfo[]>([]);
-    const [usersList, setUsersList] = useState<User[]>([])
-    
-    const visibleProvinces = showProvincesAll ? provincesFilter : provincesFilter.slice(0, 10);
-    const visibleUsers = showUsersAll ? usersList : usersList.slice(0, 10); 
-    const [allUsersList, setAllUsersList] = useState<User[]>([])
-    // const [participatedHTX, setParticipatedHTX] = useState(0)
-    const [totalHTX, setTotalHTX] = useState(0)
-    
-    const commboBoxChange = (value: string) => {
-        if(value === 'Tất cả') {
-            setProvincesFilter(provincesInfoList)
-        } else if(value === 'Đã có thành viên') {
-            setProvincesFilter(provincesInfoList.filter(item => item.UsersNum > 0))
-        } else if(value === 'Chưa có thành viên') {
-            setProvincesFilter(provincesInfoList.filter(item => item.UsersNum === 0))
-        }
-    };
-    const renderCustomLabel = ({ name , percent }: { name: string; percent: number }) => {
-        return `${name}: ${(percent * 100).toFixed(0)}%`;
-    };
-    const filterCommboBoxChange = (value: string, name: string) => {
-        const newFilters = { ...filters };
+        const [years, setYears] = useState<{ year: number }[]>([]);
+        const [provincesInfoList, setProvincesInfoList] = useState<ProvinceInfo[]>([])
+        const [provincesFilter, setProvincesFilter] = useState<ProvinceInfo[]>([])
+        const [memberInfo, setMemberInfo] = useState<MemberInfo>()
 
-        if (name === "ProvinceId") {
-            const filteredDistricts = allDistricts.filter(d => d.ProvinceId === Number(value));
-            setValuePairList(filteredDistricts); // cập nhật danh sách quận huyện
-            newFilters.ProvinceId = value === "all" ? undefined : parseInt(value);
-        } else if (name === "WardId") {
-            newFilters.WardId = value === "all" ? undefined : parseInt(value);
-        } else if (name === "Role") {
-            if (value === "all") {newFilters.Role = undefined; newFilters.Type = undefined;}
-            else if (value === "HTX_NN") {newFilters.Role = "HTX"; newFilters.Type = "NN";}
-            else if (value === "HTX_PNN") {newFilters.Role = "HTX"; newFilters.Type = "PNN";}
-            else if (value === "QTD") {newFilters.Role = "QTD"; newFilters.Type = undefined;}
-            else if (value === "LMHTX") {newFilters.Role = "LMHTX"; newFilters.Type = undefined;}
-            else if (value === "admin") {newFilters.Role = "admin"; newFilters.Type = undefined;}
-        } else if (name === "SurveyStatus") {
-            if (value === "all") newFilters.SurveyStatus = undefined;
-            else newFilters.SurveyStatus = value === "true";
-        }
+        const visibleProvinces = showProvincesAll ? provincesFilter : provincesFilter.slice(0, 3);
+        const commboBoxChange = (value: string) => {
+            if(value === 'Tất cả') {
+                setProvincesFilter(provincesInfoList)
+            } else if(value === 'Đã có thành viên') {
+                setProvincesFilter(provincesInfoList.filter(item => item.UsersNum > 0))
+            } else if(value === 'Chưa có thành viên') {
+                setProvincesFilter(provincesInfoList.filter(item => item.UsersNum === 0))
+            }
+        };
+        const renderCustomLabel = ({ name , percent }: { name: string; percent: number }) => {
+            return `${name}: ${(percent * 100).toFixed(0)}%`;
+        };
+        const fetchInfo = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const query = Cookies.get("userRole") === "LMHTX" ? `?province_id=${Cookies.get("provinceId")}` : "";
+                const [yearRes, provinceRes, userRes, roleRes, rankingsRes] = await Promise.all([
+                    fetch(`${API.surveys}/years`),
+                    fetch(`${API.provinces}/users_num`),
+                    fetch(`${API.users}/total-by-member${query}`),
+                    fetch(`${API.users}/role_number${query}`),
+                    fetch(`${API.provinces}/rankings`)
+                ]);
 
-        setFilters(newFilters);
-        filterUsers(newFilters);
-    };
+                if (!yearRes.ok || !provinceRes.ok || !userRes.ok || !roleRes.ok || !rankingsRes.ok) {
+                    throw new Error('Failed to fetch data');
+                }
 
-    const filterUsers = (currentFilters: typeof filters) => {
-        const filtered = allUsersList.filter((user) => {
+                const [yearData, provinceData, userData, roleData, rankingsData] = await Promise.all([
+                    yearRes.json(),
+                    provinceRes.json(),
+                    userRes.json(),
+                    roleRes.json(),
+                    rankingsRes.json()
+                ]);
+
+                setYears(yearData);
+                setProvincesInfoList(provinceData);
+                setProvincesFilter(provinceData);
+                setMemberInfo(userData);
+                setRoleInfo(roleData);
+                setProvinceRankings(rankingsData);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        useEffect(() => {
+            fetchInfo()
+        }, [])
+        useEffect(() => {
+            setProvinceSurveyStats({ CompletedProvinces: provinceRankings.filter(item => item.FirstSurveyTime !== null).length, UncompletedProvinces: provinceRankings.filter(item => item.FirstSurveyTime === null).length });
+        }, [provinceRankings])
+
+        const COLORS = ['#34d399', '#52525b', '#3b82f6', '#f59e0b', '#ef4444'];
+
+        const formatNumber = (num: number) => {
+            return new Intl.NumberFormat('vi-VN').format(num);
+        };
+        
+        if (error) {
             return (
-                (currentFilters.ProvinceId === undefined || user.ProvinceId === currentFilters.ProvinceId) &&
-                (currentFilters.WardId === undefined || user.WardId === currentFilters.WardId) &&
-                (currentFilters.Role === undefined || user.Role === currentFilters.Role) &&
-                (currentFilters.Type === undefined || user.Type === currentFilters.Type) &&
-                (currentFilters.SurveyStatus === undefined || user.SurveyStatus === currentFilters.SurveyStatus)
+                <main className="p-6 max-w-4xl mx-auto">
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Lỗi</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                    <Button 
+                        className="mt-4"
+                        onClick={fetchInfo}
+                        variant="outline"
+                    >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Thử lại
+                    </Button>
+                </main>
             );
-        });
-        setUsersList(filtered);
-        console.log("Filtered Users:", filtered);
-    };
-    const pieData = useMemo(() => {
-        const participatedCount = usersList.filter((user: User) => user.SurveyStatus).length;
-        const totalCount = usersList.length;
-        setTotalHTX(totalCount);
-        return [
-            { name: "Đã tham gia", value: participatedCount },
-            { name: "Chưa tham gia", value: totalCount - participatedCount },
-        ];
-    }, [usersList]);
-
-    const fetchInfo = async () => {
-        try {
-            const surveyRes = await fetch(`${API.surveys}/progress`);
-            const surveyData = await surveyRes.json();
-            setSurveysInfoList(surveyData.survey)
-
-            const provinceRes = await fetch(`${API.provinces}/users_num`)
-            const provinceData = await provinceRes.json();
-            setProvincesInfoList(provinceData);
-            setProvincesFilter(provinceData);
-            
-            const userRes = await fetch(`${API.users}`)
-            const userData = await userRes.json();
-            setUsersList(userData);
-            setAllUsersList(userData);
-            // const participatedCount = userData.filter((user: User) => user.SurveyStatus).length;
-            // const totalCount = userData.length;
-            // setParticipatedHTX(participatedCount);
-            // setTotalHTX(totalCount);
-
-            const res1 = await fetch(`${API.wards}/parent_list`)
-            const data1 = await res1.json()
-            setValuePairList0(data1)
-
-            const res2 = await fetch(`${API.wards}`)
-            const data2 = await res2.json()
-            setAllWard(data2)
-        } catch (error) {
-            console.error("Error fetching data:", error);
         }
-    };
-    useEffect(() => {
-        fetchInfo()
-    }, [])
-
-    const htxSurveyData = [
-        { name: "HTX A", timestamp: "2025-04-23T08:30:00Z" },
-        { name: "HTX B", timestamp: "2025-04-23T09:00:00Z" },
-        { name: "HTX C", timestamp: "2025-04-23T07:45:00Z" },
-        { name: "HTX D", timestamp: "2025-04-23T08:50:00Z" },
-    ]
-
-    const chartData = htxSurveyData.map((htx) => {
-        const date = new Date(htx.timestamp)
-        const timeInMinutes = date.getHours() * 60 + date.getMinutes()
-        return {
-            name: htx.name,
-            time: timeInMinutes,
-        }
-    })
-    const rankedHTX = [...htxSurveyData].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    )
-    return (
-        <main className="p-6 space-y-8 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-center">DASHBOARD</h1>
-            <Card>
-                    <CardHeader>
-                        <CardTitle>Thống kê Cuộc khảo sát</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {surveysInfoList.map((item) => (
-                            <Card className="mb-2" key={item.Id}>
-                                <CardHeader><b>{item.Title}</b></CardHeader>
-                                <CardContent>
-                                    <div>Mô tả: {item.Description}</div>
-                                    <div>Bắt đầu: {item.StartTime} - Kết thúc: {item.EndTime}</div>
-                                    <div>Tiến độ: {item.finishedNum}/{item.totalNum}</div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </CardContent>
-            </Card>
-            {/* Card */}
-            <section>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Thống kê thành viên LM Hợp Tác Xã</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Select
-                            name="ProvinceId"
-                            onValueChange={(value) => commboBoxChange(value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Tất cả"/>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={'Tất cả'}>Tất cả</SelectItem>
-                                <SelectItem value={'Đã có thành viên'}>Đã có danh sách thành viên</SelectItem>
-                                <SelectItem value={'Chưa có thành viên'}>Chưa có danh sách thành viên</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[200px]">Liên minh Tỉnh</TableHead>
-                                    <TableHead className="w-[100px]">Số thành viên</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {visibleProvinces.map((item) => (
-                                    <TableRow key={item.Id}>
-                                        <TableCell>{item.Name}</TableCell>
-                                        <TableCell>{item.UsersNum}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                        {provincesFilter.length > 10 && (
-                            <div className="mt-4 text-center">
-                                <button
-                                    className="text-blue-600 hover:underline"
-                                    onClick={() => setShowProvincesAll(!showProvincesAll)}
-                                >
-                                    {showProvincesAll ? "Thu gọn" : "Xem thêm"}
-                                </button>
-                            </div>
+        const router = useRouter();
+        useEffect(() => {
+            const userId = Cookies.get("userId");
+            const userR = Cookies.get("userRole");
+        
+            if (!userId || !userR) {
+            toast.error("Vui lòng đăng nhập để xem thông tin");
+            router.push("/login");
+            return;
+            }
+        
+            // Redirect non-admin users to regular profile
+            if (userR === "HTX" || userR === "QTD") {
+                router.push("/profile");
+                return;
+            }
+        }, [router]);
+        return (
+            <main className="p-6 space-y-8 max-w-4xl mx-auto">
+                <div className="flex justify-between items-center">
+                    <h1 className="text-2xl font-bold">DASHBOARD</h1>
+                    <Button 
+                        onClick={fetchInfo}
+                        disabled={isLoading}
+                        variant="outline"
+                    >
+                        {isLoading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <RefreshCw className="mr-2 h-4 w-4" />
                         )}
-                    </CardContent>
-                </Card>
-            </section>
-            
-            <Card>
-                <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold mb-4">Tỷ lệ HTX tham gia khảo sát</h2>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Lọc</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-row gap-4">
-                            <Select
-                                name="ProvinceId"
-                                onValueChange={(value) => filterCommboBoxChange(value, "ProvinceId")}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Chọn Tỉnh/Thành phố" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    {valuePairList0.map((item) => (
-                                        <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                name="WardId"
-                                onValueChange={(value) => filterCommboBoxChange(value, "WardId")}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Chọn Quận/Huyện" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    {valuePairList.map((item) => (
-                                        <SelectItem key={item.Id} value={String(item.Id)}>{item.Name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                name="Role"
-                                onValueChange={(value) => filterCommboBoxChange(value, "Role")}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Nhóm" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    <SelectItem value="HTX_NN">Hợp tác xã Nông nghiệp</SelectItem>
-                                    <SelectItem value="HTX_PNN">Hợp tác xã Phi nông nghiệp</SelectItem>
-                                    <SelectItem value="QTD">Quỹ tín dụng</SelectItem>
-                                    <SelectItem value="LMHTX">Liên minh hợp tác xã</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                name="SurveyStatus"
-                                onValueChange={(value) => filterCommboBoxChange(value, "SurveyStatus")}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Tiến độ" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả</SelectItem>
-                                    <SelectItem value="true">Đã tham gia</SelectItem>
-                                    <SelectItem value="false">Chưa tham gia</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </CardContent>
-                    </Card>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={pieData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={80}
-                                fill="#8884d8"
-                                label={renderCustomLabel}
-                            >
-                                <Cell fill="#34d399" />
-                                <Cell fill="#52525b" />
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
-                        <label>Tổng số: {totalHTX}</label>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[300px]">Tên tổ chức</TableHead>
-                                <TableHead className="w-[200px]">Họ Tên</TableHead>
-                                <TableHead className="w-[200px]">Tỉnh/Thành phố</TableHead>
-                                <TableHead className="w-[200px]">Phường/Xã</TableHead>
-                                <TableHead className="w-[200px]">Địa chỉ</TableHead>
-                                <TableHead className="w-[200px]">Số điện thoại</TableHead>
-                                <TableHead className="w-[200px]">Email</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {visibleUsers.map((item) => (
-                                <TableRow key={item.Id}>
-                                    <TableCell>{item.OrganizationName}</TableCell>
-                                    <TableCell>{item.Name}</TableCell>
-                                    <TableCell>{item.Province?.Name}</TableCell>
-                                    <TableCell>{item.Ward?.Name}</TableCell>
-                                    <TableCell>{item.Address}</TableCell>
-                                    <TableCell>{item.Username}</TableCell>
-                                    <TableCell>{item.Email}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    {usersList.length > 10 && (
-                        <div className="mt-4 text-center">
-                            <button
-                                className="text-blue-600 hover:underline"
-                                onClick={() => setShowUsersAll(!showUsersAll)}
-                            >
-                                {showUsersAll ? "Thu gọn" : "Xem thêm"}
-                            </button>
-                        </div>
-                    )}
-                    <div>
-                        <Button onClick={() => window.open(`${API.users}/export_filter?province_id=${filters.ProvinceId}&ward_id=${filters.WardId}&role=${filters.Role}&type=${filters.Type}&survey_status=${filters.SurveyStatus}`, "_blank")}>
-                            Xuất Excel
-                        </Button>
+                        Làm mới
+                    </Button>
+                </div>
+
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-64">
+                        <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
-                </CardContent>
-            </Card>
+                ) : (
+                    <>
+                        {Cookies.get("userRole") === "admin" || Cookies.get("userRole") === "UBKT" ? 
+                            <Card>
+                                <CardHeader>
+                                <CardTitle>Tổng quan</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-4 bg-blue-50 rounded-lg">
+                                        <h3 className="text-lg font-semibold text-blue-800">Tổng số tỉnh</h3>
+                                        <p className="text-2xl font-bold text-blue-900">{formatNumber(provincesInfoList.length)}</p>
+                                    </div>
+                                    <div className="p-4 bg-green-50 rounded-lg">
+                                        <h3 className="text-lg font-semibold text-green-800">Tổng số HTX</h3>
+                                        <p className="text-2xl font-bold text-green-900">{formatNumber((memberInfo?.members || 0) + (memberInfo?.nonMembers || 0))}</p>
+                                    </div>
+                                    <div className="p-4 bg-purple-50 rounded-lg">
+                                        <h3 className="text-lg font-semibold text-purple-800">Tỉnh đã hoàn thành</h3>
+                                        <p className="text-2xl font-bold text-purple-900">{formatNumber(provinceSurveyStats.CompletedProvinces)}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        : null}
 
-            {/* Biểu đồ cột */}
-            {/* <Card>
-                <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold mb-4">Thời gian tham gia khảo sát (theo phút trong ngày)</h2>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis label={{ value: "Phút", angle: -90, position: "insideLeft" }} />
-                            <Tooltip />
-                            <Bar dataKey="time" fill="#3b82f6" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card> */}
 
-            {/* Xếp hạng theo thời gian */}
-            {/* <Card>
-                <CardContent className="p-6 space-y-2">
-                    <h2 className="text-lg font-semibold">Danh sách HTX đã tham gia (xếp theo thời gian)</h2>
-                    <ul className="space-y-1 list-decimal list-inside">
-                        {rankedHTX.map((htx) => (
-                            <li key={htx.name}>
-                                <span className="font-medium">{htx.name}</span> – {new Date(htx.timestamp).toLocaleTimeString()}
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-            </Card> */}
-        </main>
-    )
-}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Chi tiết Cuộc khảo sát năm:</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-wrap gap-2">
+                                    {years.map((item) => (
+                                        <Button key={item.year} variant="outline" className="hover:bg-blue-50">
+                                            <Link href={`/dashboard/year?year=${item.year}`}>{item.year}</Link>
+                                        </Button>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {Cookies.get("userRole") === "admin" || Cookies.get("userRole") === "UBKT" ? 
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thống kê LM Hợp Tác Xã</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Select
+                                    name="ProvinceId"
+                                    onValueChange={(value) => commboBoxChange(value)}
+                                >
+                                    <SelectTrigger className="w-[280px]">
+                                        <SelectValue placeholder="Tất cả" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={'Tất cả'}>Tất cả</SelectItem>
+                                        <SelectItem value={'Đã có thành viên'}>Đã có danh sách thành viên</SelectItem>
+                                        <SelectItem value={'Chưa có thành viên'}>Chưa có danh sách thành viên</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <div className="mt-6">
+                                    <ResponsiveContainer width='100%' height={300}>
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: "Đã có danh sách thành viên", value: provincesInfoList.filter(item => item.UsersNum > 0).length },
+                                                    { name: "Chưa có danh sách thành viên", value: provincesInfoList.filter(item => item.UsersNum === 0).length },
+                                                ]}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                cx="50%"
+                                                cy="50%"
+                                                outerRadius={80}
+                                                fill="#8884d8"
+                                                label={renderCustomLabel}
+                                            >
+                                                <Cell fill="#34d399" />
+                                                <Cell fill="#52525b" />
+                                            </Pie>
+                                            <Tooltip 
+                                                formatter={(value: number) => [`${value} tỉnh`, 'Số lượng']}
+                                                contentStyle={{ 
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    padding: '8px'
+                                                }}
+                                            />
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="mt-6">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[200px]">Liên minh Tỉnh</TableHead>
+                                                <TableHead className="w-[100px] text-right">Số thành viên</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {visibleProvinces.map((item) => (
+                                                <TableRow key={item.Id} className="hover:bg-gray-50">
+                                                    <TableCell className="font-medium">{item.Name}</TableCell>
+                                                    <TableCell className="text-right">{formatNumber(item.UsersNum)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                    {provincesFilter.length > 3 && (
+                                        <div className="mt-4 text-center">
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => setShowProvincesAll(!showProvincesAll)}
+                                                className="text-blue-600 hover:text-blue-800"
+                                            >
+                                                {showProvincesAll ? "Thu gọn" : "Xem thêm"}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                        : null}
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Thống kê Hợp tác xã thành viên</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="mt-6">
+                                    <ResponsiveContainer width='100%' height={300}>
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: "Hợp tác xã thành viên", value: memberInfo?.members },
+                                                    { name: "Hợp tác xã không thành viên", value: memberInfo?.nonMembers },
+                                                ]}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                cx="50%"
+                                                cy="50%"
+                                                outerRadius={80}
+                                                fill="#8884d8"
+                                                label={renderCustomLabel}
+                                            >
+                                                <Cell fill="#34d399" />
+                                                <Cell fill="#52525b" />
+                                            </Pie>
+                                            <Tooltip 
+                                                formatter={(value: number) => [`${formatNumber(value)} HTX`, 'Số lượng']}
+                                                contentStyle={{ 
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    padding: '8px'
+                                                }}
+                                            />
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="mt-4 text-right text-lg font-semibold">
+                                    Tổng: {formatNumber((memberInfo?.members || 0) + (memberInfo?.nonMembers || 0))} HTX
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-6">
+                                <h2 className="text-lg font-semibold mb-4">Thống kê loại hình Hợp tác xã</h2>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                        <XAxis 
+                                            dataKey="name" 
+                                            tick={{ fill: '#374151' }}
+                                            tickLine={{ stroke: '#9ca3af' }}
+                                        />
+                                        <YAxis 
+                                            label={{ 
+                                                value: "Số lượng", 
+                                                angle: -90, 
+                                                position: "insideLeft",
+                                                style: { fill: '#374151' }
+                                            }}
+                                            tick={{ fill: '#374151' }}
+                                            tickLine={{ stroke: '#9ca3af' }}
+                                        />
+                                        <Tooltip 
+                                            formatter={(value: number) => [`${formatNumber(value)} người`, 'Số lượng']}
+                                            contentStyle={{ 
+                                                backgroundColor: 'white',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                padding: '8px'
+                                            }}
+                                        />
+                                        <Bar 
+                                            dataKey="UserNum" 
+                                            fill="#3b82f6"
+                                            radius={[4, 4, 0, 0]}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </CardContent>
+                        </Card>
+                        {Cookies.get("userRole") === "admin" || Cookies.get("userRole") === "UBKT" ? 
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Xếp hạng tỉnh theo thời gian hoàn thành khảo sát</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Card className="mb-6">
+                                        <CardHeader>
+                                            <CardTitle>Thống kê hoàn thành khảo sát theo tỉnh</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-4 bg-green-50 rounded-lg">
+                                                    <h3 className="text-lg font-semibold text-green-800">Đã hoàn thành</h3>
+                                                    <p className="text-2xl font-bold text-green-900">{formatNumber(provinceSurveyStats.CompletedProvinces)} tỉnh</p>
+                                                </div>
+                                                <div className="p-4 bg-red-50 rounded-lg">
+                                                    <h3 className="text-lg font-semibold text-red-800">Chưa hoàn thành</h3>
+                                                    <p className="text-2xl font-bold text-red-900">{formatNumber(provinceSurveyStats.UncompletedProvinces)} tỉnh</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[50px]">STT</TableHead>
+                                            <TableHead>Tỉnh/Thành phố</TableHead>
+                                            <TableHead>Vùng miền</TableHead>
+                                            <TableHead>Thời gian hoàn thành</TableHead>
+                                            <TableHead className="text-right">Số thành viên</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {provinceRankings
+                                            .filter(province => province.FirstSurveyTime !== null)
+                                            .map((province, index) => (
+                                                <TableRow key={province.Id} className="hover:bg-gray-50">
+                                                    <TableCell>{index + 1}</TableCell>
+                                                    <TableCell className="font-medium">{province.Name}</TableCell>
+                                                    <TableCell>{province.Region}</TableCell>
+                                                    <TableCell>{new Date(province.FirstSurveyTime).toLocaleString('vi-VN')}</TableCell>
+                                                    <TableCell className="text-right">{formatNumber(province.TotalMembers)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                        : null}
+                    </>
+                )}
+            </main>
+        )
+    }

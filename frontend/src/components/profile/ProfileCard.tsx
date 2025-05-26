@@ -38,7 +38,7 @@ export function ProfileCard({ user, isAdmin = false }: ProfileCardProps) {
             <h3 className="text-sm font-medium text-muted-foreground">Thông tin cơ bản</h3>
             <div className="mt-2 space-y-2">
                 <Info label="Tên đăng nhập" value={user.Username} />
-                <Info label="Email" value={user.Email} />
+                {user.Email && <Info label="Email" value={user.Email} />}
                 <Info label="Vai trò" value={user.Role} />
                 {user.Name && <Info label="Họ và tên" value={user.Name} />}
                 {user.OrganizationName && <Info label="Tổ chức" value={user.OrganizationName} />}

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useUser } from '@/context/UserContext'
+import { useUser } from '@/contexts/UserContext'
 import { Button } from '@/components/ui/button'
 import { API } from '@/lib/api'
 import Link from 'next/link'

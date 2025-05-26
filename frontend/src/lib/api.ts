@@ -29,6 +29,11 @@ export const surveyService = {
         return response.data;
     },
 
+    getAccessRules: async (surveyId: number) => {
+        const response = await axios.get(`${BASE_URL}/surveys/access_rule/${surveyId}`);
+        return response.data;
+    },
+
     getSurveys: async () => {
         const response = await axios.get(`${BASE_URL}/surveys`);
         return response.data;
@@ -177,6 +182,32 @@ export const provinceService = {
         const response = await axios.get(`${BASE_URL}/provinces`);
         return response.data;
     },
+    
+    getProvinceRankings: async () => {
+        const response = await axios.get(`${BASE_URL}/provinces/rankings`);
+        return response.data;
+    },
+
+    getProvinceSurveyCompletionStats: async () => {
+        const response = await axios.get(`${BASE_URL}/provinces/survey-completion-stats`);
+        return response.data;
+    },
+    
+    exportDynamic: async (data: {
+        columns: Array<{ header: string; key: string; width?: number }>;
+        data: Array<Record<string, any>>;
+        filename?: string;
+        sheetName?: string;
+    }) => {
+        const response = await axios.post(
+            `${BASE_URL}/provinces/export-dynamic`,
+            data,
+            {
+                responseType: "blob"
+            }
+        );
+        return response;
+    }
 };
 
 export const wardService = {

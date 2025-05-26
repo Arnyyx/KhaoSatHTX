@@ -1,9 +1,8 @@
-// Province.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const Province = sequelize.define(
-    "Province",
+const ProvincesTotalPoint = sequelize.define(
+    "ProvincesTotalPoint",
     {
         Id: {
             type: DataTypes.INTEGER,
@@ -11,26 +10,34 @@ const Province = sequelize.define(
             autoIncrement: true,
             allowNull: false,
         },
-        Name: {
+        Year: {
             type: DataTypes.TEXT,
             allowNull: true,
         },
-        Region: {
-            type: DataTypes.TEXT,
+        ProvinceId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: "Provinces", 
+                key: "Id",
+            },
+        },
+        TotalPoint: {
+            type: DataTypes.FLOAT,
             allowNull: true,
         },
-        TotalUsers: {
+        MembersSurveyed: {
             type: DataTypes.INTEGER,
             allowNull: true,
         },
-        TotalMembers: {
+        NonMembersSurveyed: {
             type: DataTypes.INTEGER,
-            allowNull: true,
         },
     },
     {
-        tableName: "Provinces",
+        tableName: "ProvincesTotalPoint",
         timestamps: false,
     }
 );
-module.exports = Province;
+
+module.exports = ProvincesTotalPoint; 

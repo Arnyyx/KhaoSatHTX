@@ -49,25 +49,26 @@ export default function SurveyPage() {
         const role = profile.user.Role?.toLowerCase();
         const type = profile.user.Type?.toLowerCase();
 
-        const surveyId = role === "htx" ? (type === "nn" ? 1 : type === "pnn" ? 3 : undefined) : role === "qtd" ? 2 : undefined;
+        // const surveyId = role === "htx" ? type === "nn" ? 1 : type === "pnn" ? 3 : undefined : role === "qtd" ? 2 : undefined;
 
-        if (!surveyId) throw new Error("Không xác định được vai trò người dùng.");
+        // if (!surveyId) throw new Error("Không xác định được vai trò người dùng.");
 
-        const [surveyRes, questionRes] = await Promise.all([
-          fetch(`${API.surveys}/${surveyId}`),
-          fetch(`${API.questions}/by-survey?surveyId=${surveyId}`),
-        ]);
-
+        const [surveyRes] = await Promise.all([
+          fetch(`${API.surveys}/by_role?role=${role}&type=${type}`),
+        ]);   
         if (!surveyRes.ok) throw new Error("Không thể lấy thông tin khảo sát.");
-        if (!questionRes.ok) throw new Error("Không thể lấy danh sách câu hỏi.");
+        const surveyData = await surveyRes.json(); 
 
-        const surveyData = await surveyRes.json();
-        const questionData = await questionRes.json();
+        const [questionRes] = await Promise.all([
+          fetch(`${API.questions}/by-survey?surveyId=${surveyData.surveys[0].Id}`),
+        ]);
+        if (!questionRes.ok) throw new Error("Không thể lấy danh sách câu hỏi.");
+        const questionData = await questionRes.json();    
 
         if (!Array.isArray(questionData.data)) throw new Error("Dữ liệu câu hỏi không hợp lệ.");
 
-        setSurvey(surveyData.survey);
         setQuestions(questionData.data);
+        setSurvey(surveyData.surveys[0]);
       } catch (err: any) {
         console.error("❌ Lỗi khi tải dữ liệu khảo sát:", err);
         setError(err.message || "Đã xảy ra lỗi.");

@@ -57,7 +57,7 @@ exports.getParentList = async (req, res) => {
     res.json(provinces);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Database error');
+    res.status(500).json({ message: 'Internal server error', err: err.message });
   }
 };
 
