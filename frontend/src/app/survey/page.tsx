@@ -61,7 +61,7 @@ export default function SurveyPage() {
             const resultRes = await fetch(`${API.result}?survey_id=${id}&user_id=${ID_user}`);
             if (!resultRes.ok) throw new Error("Không lấy được kết quả khảo sát.");
             const resultData = await resultRes.json();
-            setResults(resultData.data);
+            setResults(resultData);
             setIsLocked(true);
           } else {
             setIsLocked(true);
@@ -152,7 +152,11 @@ export default function SurveyPage() {
     <p><strong>Mô tả:</strong> {survey?.Description}</p>
     <p><strong>Trạng thái:</strong> {survey?.Status ? "Đang mở" : "Đã đóng"}</p>
   </div>
-
+  {isLocked ?
+  <p className="mt-6 text-sm text-red-600 font-medium text-center sm:text-left">
+    Bạn đã hoàn thành khảo sát. Kết quả khảo sát của bạn đã được lưu lại.
+  </p>
+  : null}
   <div className="mt-6 overflow-x-auto">
     <table className="min-w-full border border-gray-300 text-sm sm:text-base">
       <thead>
@@ -186,7 +190,7 @@ export default function SurveyPage() {
                   type="radio"
                   name={`question-${q.Id}`}
                   value={option}
-                  checked={answers[q.Id] === option}
+                  checked={isLocked ? results.some(r => r.QuestionId === q.Id && r.Answer === answerValueMap[option]) : answers[q.Id] === option}
                   disabled={isLocked}
                   onChange={() =>
                     setAnswers((prev) => ({ ...prev, [q.Id]: option }))
@@ -199,11 +203,12 @@ export default function SurveyPage() {
       </tbody>
     </table>
   </div>
-
+  {!isLocked ?
   <p className="mt-6 text-sm text-red-600 font-medium text-center sm:text-left">
     Lưu ý: Sau khi nhấn "Hoàn thành khảo sát", tài khoản của bạn sẽ kết thúc nhiệm vụ và không thể đăng nhập lại.
   </p>
-
+  : null}
+  {!isLocked ?
   <div className="flex justify-center sm:justify-start">
     <button
       className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm sm:text-base"
@@ -213,6 +218,7 @@ export default function SurveyPage() {
       Hoàn thành khảo sát
     </button>
   </div>
+  : null}
 </div>
 
 
