@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Question = require("../models/Question");
 const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const ExcelJS = require('exceljs');
@@ -12,6 +13,7 @@ const userQueue = require("../queue/userQueue");
 const { mapExcelHeaders, checkRequiredHeaders, validateUserData } = require("../utils/userUtils");
 const { formatDateToDDMMYYYY, parseDateFromDDMMYYYY } = require("../utils/dateUtils");
 const jwt = require('jsonwebtoken');
+const { Survey } = require("../models");
 
 exports.getAllUsers = async (req, res) => {
     try {
@@ -79,6 +81,10 @@ exports.getAllUsers = async (req, res) => {
                 {
                     association: 'Ward',
                     attributes: ['Name']
+                },
+                {
+                    association: 'SurveyStatuses',
+                    attributes: ['SurveyId', 'IsLocked', 'SurveyTime']
                 }]
             });
             return res.status(200).json({ total: users.count, items: users.rows });
@@ -92,6 +98,10 @@ exports.getAllUsers = async (req, res) => {
             }, {
                 association: 'Ward',
                 attributes: ['Name']
+            },
+            {
+                association: 'SurveyStatuses',
+                attributes: ['SurveyId', 'IsLocked', 'SurveyTime']
             }],
         });
         res.status(200).json({ total: users.length, items: users });
@@ -313,62 +323,141 @@ exports.userLogin = async (req, res) => {
         return res.status(500).send('Server Error');
     }
 };
+function getQuery(purpose, type, value) {
+    switch (purpose) {
+        case 'total':
+            return `AND YEAR(UserSurveyStatus.SurveyTime) = ${value}`;
+        case 'survey_id':
+            return `AND SurveyAccessRules.SurveyId = ${value}`;
+            
+    }
+}
+exports.getUserBySurvey = async (req, res) => {
+    try {
+        const { year, survey_id, page, limit, province_id, ward_id, survey_status, is_member } = req.query;
+
+        // Các điều kiện lọc động
+        const survey_status_value = survey_status 
+            ? survey_status === 'true' 
+                ? 'AND UserSurveyStatus.SurveyTime IS NOT NULL' 
+                : 'AND UserSurveyStatus.SurveyTime IS NULL' 
+            : '';
+
+        const province_id_value = province_id ? `AND Users.ProvinceId = ${province_id}` : '';
+        const ward_id_value = ward_id ? `AND Users.WardId = ${ward_id}` : '';
+        const is_member_value = is_member ? is_member === 'true' ? `AND Users.IsMember = 1` : `AND Users.IsMember = 0` : '';
+
+        // Điều kiện lọc theo SurveyId hoặc theo Year
+        let survey_filter = '';
+        if (survey_id) {
+            survey_filter = `SurveyAccessRules.SurveyId = ${survey_id}`;
+        } else if (year) {
+            survey_filter = `YEAR(Surveys.StartTime) = ${year}`;
+        } else {
+            return res.status(400).json({ message: "Cần truyền survey_id hoặc year" });
+        }
+
+        // Tổng số câu hỏi chỉ áp dụng nếu có survey_id
+        const totalQuestion = survey_id
+            ? await Question.count({ where: { SurveyId: survey_id } })
+            : 0;
+
+        // Truy vấn tổng số người dùng
+        const totalResult = await sequelize.query(`
+            SELECT COUNT(*) as total
+            FROM Users
+            JOIN SurveyAccessRules 
+                ON Users.Role = SurveyAccessRules.Role 
+                AND Users.Type = SurveyAccessRules.Type 
+            JOIN Surveys ON SurveyAccessRules.SurveyId = Surveys.Id
+            LEFT JOIN UserSurveyStatus 
+                ON Users.Id = UserSurveyStatus.UserId 
+                AND UserSurveyStatus.SurveyId = Surveys.Id
+            JOIN Provinces ON Users.ProvinceId = Provinces.Id
+            JOIN Wards ON Users.WardId = Wards.Id
+            WHERE Users.Role IN ('HTX', 'QTD')
+            AND ${survey_filter}
+            ${province_id_value}
+            ${ward_id_value}
+            ${survey_status_value}
+            ${is_member_value}
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        const total = totalResult[0].total;
+
+        // Truy vấn danh sách Users (có/không phân trang)
+        const userQuery = `
+            SELECT Users.Id, OrganizationName, Users.Name, Address, Username, IsMember, Email, Users.ProvinceId, WardId, Users.Role, Users.Type, Provinces.Name as Province, Wards.Name as Ward, SurveyTime, UserSurveyStatus.Point
+            FROM Users
+            JOIN SurveyAccessRules 
+                ON Users.Role = SurveyAccessRules.Role 
+                AND Users.Type = SurveyAccessRules.Type 
+            JOIN Surveys ON SurveyAccessRules.SurveyId = Surveys.Id
+            LEFT JOIN UserSurveyStatus 
+                ON Users.Id = UserSurveyStatus.UserId 
+                AND UserSurveyStatus.SurveyId = Surveys.Id
+            JOIN Provinces ON Users.ProvinceId = Provinces.Id
+            JOIN Wards ON Users.WardId = Wards.Id
+            WHERE Users.Role IN ('HTX', 'QTD')
+            AND ${survey_filter}
+            ${province_id_value}
+            ${ward_id_value}
+            ${survey_status_value}
+            ${is_member_value}
+            ORDER BY Username
+            ${page && limit ? `OFFSET (${page} - 1) * ${limit} ROWS FETCH NEXT ${limit} ROWS ONLY` : ''};
+        `;
+
+        const users = await sequelize.query(userQuery, { type: sequelize.QueryTypes.SELECT });
+
+        return res.status(200).json({ totalQuestion, total, items: users });
+    } catch (error) {
+        console.error("Error in getUserBySurvey:", error);
+        res.status(400).json({ message: "Lỗi khi lấy user", error: error.message });
+    }
+};
+
+
 exports.exportFilteredUser = async (req, res) => {
     try {
-        const whereClause = {};
+        const { survey_id, province_id, ward_id, survey_status, is_member } = req.query;
+        const survey_status_value = survey_status !== 'undefined' ? survey_status === 'true' ? 'AND UserSurveyStatus.SurveyTime IS NOT NULL' : 'AND UserSurveyStatus.SurveyTime IS NULL' : '';
+        const province_id_value = province_id !== 'undefined' ? `AND Users.ProvinceId = ${province_id}` : '';
+        const ward_id_value = ward_id !== 'undefined' ? `AND Users.WardId = ${ward_id}` : '';
+        const is_member_value = is_member !== 'undefined' ? is_member === 'true' ? `AND Users.IsMember = 1` : `AND Users.IsMember = 0` : '';
+        const users = await sequelize.query(`
+            SELECT Users.Id, OrganizationName, Users.Name, Address, Username, IsMember, Email, Users.ProvinceId, WardId, Users.Role, Users.Type, Provinces.Name as Province, Wards.Name as Ward, SurveyTime, UserSurveyStatus.Point
+            FROM Users
+            JOIN SurveyAccessRules 
+                ON Users.Role = SurveyAccessRules.Role 
+            AND Users.Type = SurveyAccessRules.Type 
+            AND SurveyAccessRules.SurveyId = ${survey_id}
+            LEFT JOIN UserSurveyStatus 
+                ON Users.Id = UserSurveyStatus.UserId 
+            AND UserSurveyStatus.SurveyId = ${survey_id}
+            JOIN Provinces ON Users.ProvinceId = Provinces.Id
+            JOIN Wards ON Users.WardId = Wards.Id
+            WHERE Users.Role IN ('HTX', 'QTD')
+            ${province_id_value}
+            ${ward_id_value}
+            ${survey_status_value}
+            ${is_member_value}
+      `, { type: sequelize.QueryTypes.SELECT });
 
-        if (req.query.province_id !== 'undefined') {
-            whereClause.ProvinceId = req.query.province_id;
-        }
-
-        if (req.query.ward_id !== 'undefined') {
-            whereClause.WardId = req.query.ward_id;
-        }
-
-        if (req.query.role !== 'undefined') {
-            whereClause.Role = req.query.role;
-        }
-
-        if (req.query.type !== 'undefined') {
-            whereClause.Type = req.query.type;
-        }
-
-        if (req.query.survey_status !== 'undefined') {
-            whereClause.SurveyStatus = req.query.survey_status === 'true';
-        }
-
-        const users = await User.findAll({
-            where: whereClause,
-            attributes: ['OrganizationName', 'Name', 'Address', 'Username', 'Email'],
-            include: [{
-                association: 'Province',
-                attributes: ['Name']
-            },
-            {
-                association: 'Ward',
-                attributes: ['Name']
-            }]
-        });
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Người dùng');
         worksheet.columns = [
             { header: 'Tên tổ chức', key: 'OrganizationName', width: 30 },
             { header: 'Tên người dùng', key: 'Name', width: 30 },
-            { header: 'Tên tỉnh', key: 'ProvinceName', width: 30 },
-            { header: 'Tên huyện', key: 'WardName', width: 30 },
+            { header: 'Điểm đánh giá', key: 'Point', width: 30 },
+            { header: 'Tên tỉnh', key: 'Province', width: 30 },
+            { header: 'Tên huyện', key: 'Ward', width: 30 },
             { header: 'Địa chỉ', key: 'Address', width: 30 },
             { header: 'SDT', key: 'Username', width: 20 },
             { header: 'Email', key: 'Email', width: 30 },
+            { header: 'Thời gian khảo sát', key: 'SurveyTime', width: 20 },
         ];
-        const rows = users.map((user) => {
-            const u = user.toJSON();
-            return {
-                ...u,
-                ProvinceName: u.Province?.Name || '',
-                WardName: u.Ward?.Name || '',
-            };
-        });
-        worksheet.addRows(rows);
+        worksheet.addRows(users.map(p => p));
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=FilteredUsers.xlsx');
@@ -413,18 +502,21 @@ exports.userLogin = async (req, res) => {
             where: {
                 Username: username,
                 Password: password
-            } // Nếu chưa mã hóa mật khẩu
+            },
+            include: [
+                { association: "SurveyStatuses" },
+            ],
         });
 
         if (!user) {
             return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
         }
 
-        const isLocked = user.IsLocked === true || user.IsLocked === 1;
-        const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
+        const isLocked = user.UserSurveyStatus && (user.UserSurveyStatus.IsLocked === true || user.UserSurveyStatus.IsLocked === 1);
+        const surveyTime = user.UserSurveyStatus ? user.UserSurveyStatus.SurveyTime : null;
 
         if (isLocked) {
-            const message = surveyStatus
+            const message = surveyTime !== null
                 ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
                 : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
             return res.json({ success: false, message });
@@ -769,6 +861,118 @@ async function processImportData(usersData, currentUserProvinceId) {
     };
 }
 
+exports.exportUsersBySurvey = async (req, res) => {
+    try {
+        const { year, is_member } = req.query;
+
+        if (!year) {
+            return res.status(400).json({ message: "Cần truyền 'year'" });
+        }
+
+        const is_member_value = is_member ? is_member === 'true' ? `AND Users.IsMember = 1` : `AND Users.IsMember = 0` : '';
+
+        const users = await sequelize.query(`
+            SELECT Users.Id, OrganizationName, Users.Name, Address, Username, IsMember, Email, Users.ProvinceId, WardId, Users.Role, Users.Type,
+                   (SELECT COUNT(*) FROM Questions WHERE SurveyId=SurveyAccessRules.SurveyId) as QuestionCount, 
+                   Provinces.Name as Province, Wards.Name as Ward, SurveyTime, 
+                   dbo.DIEM_HTX(Users.Id,1) as Point 
+            FROM Users
+            JOIN SurveyAccessRules 
+                ON Users.Role = SurveyAccessRules.Role 
+                AND Users.Type = SurveyAccessRules.Type 
+            JOIN Surveys ON SurveyAccessRules.SurveyId = Surveys.Id
+            LEFT JOIN UserSurveyStatus 
+                ON Users.Id = UserSurveyStatus.UserId 
+                AND UserSurveyStatus.SurveyId = Surveys.Id
+            JOIN Provinces ON Users.ProvinceId = Provinces.Id
+            JOIN Wards ON Users.WardId = Wards.Id
+            WHERE Users.Role IN ('HTX', 'QTD')
+            AND YEAR(Surveys.StartTime) = ${year}
+            ${is_member_value}
+            ORDER BY Username
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Người dùng khảo sát');
+
+        // Add headers
+        worksheet.columns = [
+            { header: 'Tên tổ chức', key: 'OrganizationName', width: 30 },
+            { header: 'Họ tên', key: 'Name', width: 30 },
+            { header: 'Điểm đánh giá', key: 'Point', width: 15 },
+            { header: 'Tỉnh/Thành phố', key: 'Province', width: 20 },
+            { header: 'Quận/Huyện', key: 'Ward', width: 20 },
+            { header: 'Địa chỉ', key: 'Address', width: 40 },
+            { header: 'Số điện thoại', key: 'Username', width: 15 },
+            { header: 'Email', key: 'Email', width: 30 },
+            { header: 'Vai trò', key: 'Role', width: 15 },
+            { header: 'Loại', key: 'Type', width: 15 },
+            { header: 'Thành viên', key: 'IsMember', width: 15 },
+            { header: 'Thời gian khảo sát', key: 'SurveyTime', width: 20 }
+        ];
+
+        // Add data rows
+        users.forEach(user => {
+            worksheet.addRow({
+                ...user,
+                IsMember: user.IsMember ? 'Có' : 'Không',
+                SurveyTime: user.SurveyTime ? new Date(user.SurveyTime).toLocaleString() : 'Chưa hoàn thành'
+            });
+        });
+
+        // Style the header row
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=survey-users-${year}.xlsx`);
+
+        // Write to response
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error("Error in exportUsersBySurvey:", error);
+        res.status(400).json({ message: "Lỗi khi xuất file Excel", error: error.message });
+    }
+};
+
+exports.getTotalUsersByMemberStatus = async (req, res) => {
+    try {
+        const result = await User.findAll({
+            attributes: [
+                'IsMember',
+                [sequelize.fn('COUNT', sequelize.col('Id')), 'total']
+            ],
+            where: {
+                Role: ['HTX', 'QTD'],
+                IsMember: {
+                    [Op.ne]: null
+                }
+            },
+            group: ['IsMember']
+        });
+
+        // Format the response
+        const formattedResult = {
+            members: 0,
+            nonMembers: 0
+        };
+
+        result.forEach(item => {
+            if (item.IsMember) {
+                formattedResult.members = parseInt(item.getDataValue('total'));
+            } else {
+                formattedResult.nonMembers = parseInt(item.getDataValue('total'));
+            }
+        });
+
+        res.status(200).json(formattedResult);
+    } catch (error) {
+        console.error("Error in getTotalUsersByMemberStatus:", error);
+        res.status(400).json({ message: "Lỗi khi lấy tổng số người dùng", error: error.message });
+    }
+}
 exports.deleteMultipleUsers = async (req, res) => {
     try {
         const { ids } = req.body;
