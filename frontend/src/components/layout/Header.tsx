@@ -26,7 +26,6 @@ function useCookieChange(cookieName: string) {
     const checkCookie = () => {
       const cookieValue = Cookies.get(cookieName);
       setValue(cookieValue);
-      console.log(cookieValue);
     };
 
     checkCookie();
@@ -72,18 +71,21 @@ export function Header() {
           { label: "Quản lý tỉnh", href: "/admin/provinces" },
           { label: "Quản lý phường/xã", href: "/admin/wards" },
           { label: "Test", href: "/test" },
+          { label: "Thống kê", href: "/dashboard" },
         ];
       case "LMHTX":
         return [
           { label: "Thông tin cá nhân", href: "/union/profile" },
           { label: "Báo cáo", href: "/union/reports" },
           { label: "Quản lý HTX", href: "/union/management" },
+          { label: "Thống kê", href: "/dashboard" },
         ];
       case "UBKT":
         return [
           { label: "Thông tin cá nhân", href: "/union/profile" },
           { label: "Báo cáo", href: "/union/reports" },
           { label: "Quản lý HTX", href: "/union/management" },
+          { label: "Thống kê", href: "/dashboard" },
         ];
       case "HTX":
         return [
@@ -96,7 +98,6 @@ export function Header() {
           { label: "Làm khảo sát", href: "/survey" },
         ];
       default:
-        console.log(userRole);
         return [];
     }
   };
