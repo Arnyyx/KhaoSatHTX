@@ -1,6 +1,8 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import Link from 'next/link';
 import {
@@ -139,7 +141,8 @@ export default function DashboardYear() {
     }, [provincePointList]);
     const fetchSurvey = async () => {
         try {
-            const surveyRes = await fetch(`${API.surveys}/progress?year=${year}`);
+            const query = Cookies.get("userRole") === "LMHTX" ? `&province_id=${Cookies.get("provinceId")}` : "";
+            const surveyRes = await fetch(`${API.surveys}/progress?year=${year}${query}`);
             const surveyData = await surveyRes.json();
             setSurveyInfo(surveyData.surveys);
         } catch (error) {
@@ -252,10 +255,28 @@ export default function DashboardYear() {
     useEffect(() => {
         if (year) fetchSurvey();
     }, []);
+    const router = useRouter();
+    useEffect(() => {
+        const userId = Cookies.get("userId");
+        const userR = Cookies.get("userRole");
+    
+        if (!userId || !userR) {
+        toast.error("Vui lòng đăng nhập để xem thông tin");
+        router.push("/login");
+        return;
+        }
+    
+        // Redirect non-admin users to regular profile
+        if (userR === "HTX" || userR === "QTD") {
+            router.push("/profile");
+            return;
+        }
+    }, [router]);
     return (
         <main className="p-6 space-y-8 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold text-center">Thống kê Chỉ số hài lòng năm {year}</h1>
-            
+            <h1 className="text-2xl font-bold text-center">Khảo sát năm {year}</h1>
+            {Cookies.get("userRole") === "admin" || Cookies.get("userRole") === "UBKT" ?
+            <div>
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">Thứ hạng Chỉ số hài lòng</h2>
                 <div className="flex gap-4 items-center">
@@ -323,6 +344,8 @@ export default function DashboardYear() {
                     </button>
                 </div>
             )}
+            </div>
+            : null}
             <div>
                 <Button className="mr-2">
                     <Link href={`/dashboard/progress?year=${year}`}>

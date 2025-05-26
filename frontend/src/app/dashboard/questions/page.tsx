@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -62,7 +64,8 @@ export default function DashboardQuestions() {
 
     const fetchSurveys = async () => {
         try {
-            const response = await fetch(`${API.surveys}/progress?year=${year}`);
+            const query = Cookies.get("userRole") === "LMHTX" ? `&province_id=${Cookies.get("provinceId")}` : "";
+            const response = await fetch(`${API.surveys}/progress?year=${year}${query}`);
             const data = await response.json();
             setSurveys(data.surveys);
             if (data.surveys && data.surveys.length > 0) {
@@ -85,7 +88,9 @@ export default function DashboardQuestions() {
             if (selectedSurvey) {
                 queryParams.append('survey_id', selectedSurvey);
             }
-
+            if (Cookies.get("userRole") === "LMHTX") {
+                queryParams.append('province_id', Cookies.get("provinceId") || "");
+            }
             const response = await fetch(`${API.surveys}/question-stats?${queryParams.toString()}`);
             const data = await response.json();
             setStats(data.stats);
@@ -111,7 +116,23 @@ export default function DashboardQuestions() {
     const handlePageChange = (newPage: number) => {
         setPagination(prev => ({ ...prev, page: newPage }));
     };
-
+    const router = useRouter();
+    useEffect(() => {
+        const userId = Cookies.get("userId");
+        const userR = Cookies.get("userRole");
+    
+        if (!userId || !userR) {
+        toast.error("Vui lòng đăng nhập để xem thông tin");
+        router.push("/login");
+        return;
+        }
+    
+        // Redirect non-admin users to regular profile
+        if (userR === "HTX" || userR === "QTD") {
+            router.push("/profile");
+            return;
+        }
+    }, [router]);
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">

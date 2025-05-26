@@ -3,7 +3,7 @@ const Question = require("../models/Question");
 const { parse } = require("csv-parse");
 const { Readable } = require("stream");
 const ExcelJS = require('exceljs');
-const { Op } = require("sequelize");
+const { Op, fn, col } = require('sequelize');
 const sequelize = require("../config/database");
 const Province = require("../models/Province");
 const Ward = require("../models/Ward");
@@ -295,6 +295,13 @@ exports.userLogin = async (req, res) => {
         });
 
         res.cookie('role', user.Role.toLowerCase(), {
+            httpOnly: false,
+            sameSite: 'Lax',
+            secure: false,
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.cookie('provinceId', user.ProvinceId, {
             httpOnly: false,
             sameSite: 'Lax',
             secure: false,
@@ -863,13 +870,15 @@ async function processImportData(usersData, currentUserProvinceId) {
 
 exports.exportUsersBySurvey = async (req, res) => {
     try {
-        const { year, is_member } = req.query;
+        const { year, is_member, province_id } = req.query;
 
         if (!year) {
             return res.status(400).json({ message: "Cần truyền 'year'" });
         }
 
         const is_member_value = is_member ? is_member === 'true' ? `AND Users.IsMember = 1` : `AND Users.IsMember = 0` : '';
+        const province_value = province_id ? `AND Users.ProvinceId = ${province_id}` : '';
+
 
         const users = await sequelize.query(`
             SELECT Users.Id, OrganizationName, Users.Name, Address, Username, IsMember, Email, Users.ProvinceId, WardId, Users.Role, Users.Type,
@@ -888,6 +897,7 @@ exports.exportUsersBySurvey = async (req, res) => {
             JOIN Wards ON Users.WardId = Wards.Id
             WHERE Users.Role IN ('HTX', 'QTD')
             AND YEAR(Surveys.StartTime) = ${year}
+            ${province_value}
             ${is_member_value}
             ORDER BY Username
         `, { type: sequelize.QueryTypes.SELECT });
@@ -936,22 +946,89 @@ exports.exportUsersBySurvey = async (req, res) => {
         res.status(400).json({ message: "Lỗi khi xuất file Excel", error: error.message });
     }
 };
+exports.getRoleNumber = async (req, res) => {
+    try {
+        const { province_id } = req.query;
+        let result;
+        if (province_id) {
+            result = await User.findAll({
+                attributes: [
+                    'Role',
+                    'Type',
+                    [fn('COUNT', '*'), 'UserNum']
+                ],
+                where: {
+                    Role: {
+                        [Op.in]: ['HTX', 'QTD']
+                    },
+                    ProvinceId: province_id
+                },
+                group: ['Role', 'Type']
+            });
+        } else {
+            result = await User.findAll({
+                attributes: [
+                    'Role',
+                    'Type',
+                    [fn('COUNT', '*'), 'UserNum']
+                ],
+                where: {
+                    Role: {
+                        [Op.in]: ['HTX', 'QTD']
+                    }
+                },
+                group: ['Role', 'Type']
+            });
+        }
+        
 
+        const r = result.map(item => ({
+            name: item.Role === 'QTD' ? 'Quỹ tín dụng' : item.Type === 'PNN' ? 'Hợp tác xã Phi nông nghiệp' : 'Hợp tác xã Nông nghiệp',
+            UserNum: item.getDataValue('UserNum')
+        }));
+        res.status(200).json(r);
+    } catch (error) {
+        console.error("Error in getRoleNumber:", error);
+        res.status(400).json({ message: "Lỗi khi lấy số lượng người dùng theo vai trò", error: error.message });
+    }
+}
+                
 exports.getTotalUsersByMemberStatus = async (req, res) => {
     try {
-        const result = await User.findAll({
-            attributes: [
-                'IsMember',
-                [sequelize.fn('COUNT', sequelize.col('Id')), 'total']
-            ],
-            where: {
-                Role: ['HTX', 'QTD'],
-                IsMember: {
-                    [Op.ne]: null
-                }
-            },
-            group: ['IsMember']
-        });
+        const { province_id } = req.query;
+
+        let result;
+
+        if (province_id) {
+            result = await User.findAll({
+                attributes: [
+                    'IsMember',
+                    [sequelize.fn('COUNT', sequelize.col('Id')), 'total']
+                ],
+                where: {
+                    Role: ['HTX', 'QTD'],
+                    ProvinceId: province_id,
+                    IsMember: {
+                        [Op.ne]: null
+                    }
+                },
+                group: ['IsMember']
+            });
+        } else {
+            result = await User.findAll({
+                attributes: [
+                    'IsMember',
+                    [sequelize.fn('COUNT', sequelize.col('Id')), 'total']
+                ],
+                where: {
+                    Role: ['HTX', 'QTD'],
+                    IsMember: {
+                        [Op.ne]: null
+                    }
+                },
+                group: ['IsMember']
+            });
+        }
 
         // Format the response
         const formattedResult = {

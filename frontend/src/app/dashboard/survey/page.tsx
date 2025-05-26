@@ -3,6 +3,8 @@
 import { use, useEffect, useState } from "react"
 import { useMemo } from "react";
 import Link from 'next/link';
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import {
     Button,
 } from "@/components/ui/button"
@@ -173,7 +175,8 @@ export default function DashboardSurvey() {
     };
     const fetchSurveyAndUsers = async (page: number, currentFilters = filters) => {
         try {
-            const surveyRes = await fetch(`${API.surveys}/progress?id=${survey_id}`);
+            const query = Cookies.get("userRole") === "LMHTX" ? `&province_id=${Cookies.get("provinceId")}` : "";
+            const surveyRes = await fetch(`${API.surveys}/progress?id=${survey_id}${query}`);
             const surveyData = await surveyRes.json();
             setSurveyInfo(surveyData.surveys);
             // Build query parameters for filters
@@ -188,6 +191,10 @@ export default function DashboardSurvey() {
             if (currentFilters.WardId) queryParams.append('ward_id', currentFilters.WardId.toString());
             if (currentFilters.IsMember !== undefined) queryParams.append('is_member', currentFilters.IsMember.toString());
             if (currentFilters.SurveyStatus !== undefined) queryParams.append('survey_status', currentFilters.SurveyStatus.toString());
+
+            if (Cookies.get("userRole") === "LMHTX") {
+                queryParams.append('province_id', Cookies.get("provinceId") || "");
+            }
 
             const userRes = await fetch(`${API.users}/survey?${queryParams.toString()}`);
             const userData = await userRes.json();
@@ -229,13 +236,19 @@ export default function DashboardSurvey() {
     }, [surveyInfo]);
     const fetchInitialData = async () => {
         try {
-            const [res1, res2] = await Promise.all([
-                fetch(`${API.provinces}`),
-                fetch(`${API.wards}`),
-            ]);
-            const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
+            const query1 = Cookies.get("userRole") === "LMHTX" ? `/${Cookies.get("provinceId")}` : "";
+            const res1 = await fetch(`${API.provinces}${query1}`);
+            const data1 = await res1.json();
             setProvincesList(data1.items);
-            setAllWard(data2.items);
+
+            const query2 = Cookies.get("userRole") === "LMHTX" ? `/province/${Cookies.get("provinceId")}` : "";
+            const res2 = await fetch(`${API.wards}${query2}`);
+            const data2 = await res2.json();
+            if (Cookies.get("userRole") !== "LMHTX") {
+                setAllWard(data2.items);
+            } else if (Cookies.get("userRole") === "LMHTX") {
+                setValuePairList(data2.items);
+            }
         } catch (err) {
             console.error("Error fetching initial data:", err);
         }
@@ -349,7 +362,24 @@ export default function DashboardSurvey() {
             toast.error('Xuất Excel thất bại');
         }
     };
-
+    
+    const router = useRouter();
+    useEffect(() => {
+        const userId = Cookies.get("userId");
+        const userR = Cookies.get("userRole");
+    
+        if (!userId || !userR) {
+        toast.error("Vui lòng đăng nhập để xem thông tin");
+        router.push("/login");
+        return;
+        }
+    
+        // Redirect non-admin users to regular profile
+        if (userR === "HTX" || userR === "QTD") {
+            router.push("/profile");
+            return;
+        }
+    }, [router]);
     return (
         <main className="p-6 space-y-8 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-center mb-6">Chi tiết khảo sát</h1>
@@ -393,7 +423,9 @@ export default function DashboardSurvey() {
             <Tabs defaultValue="users" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="users">Danh sách người dùng</TabsTrigger>
+                    {Cookies.get("userRole") === "admin" || Cookies.get("userRole") === "UBKT" ?
                     <TabsTrigger value="provinces">Thứ hạng Chỉ số hài lòng</TabsTrigger>
+                    : null}
                 </TabsList>
                 <TabsContent value="users">
                     <h2 className="text-lg font-semibold mb-4">Tỷ lệ HTX tham gia khảo sát</h2>
@@ -416,6 +448,7 @@ export default function DashboardSurvey() {
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {Cookies.get("userRole") === "admin" || Cookies.get("userRole") === "UBKT" ?
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Tỉnh/Thành phố</label>
                                     <Select
@@ -434,6 +467,12 @@ export default function DashboardSurvey() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                : <div className="space-y-2">
+                                    {provincesList.map((item) => (
+                                        <label key={item.Id} className="text-sm font-medium">Tỉnh {item.Name}</label>
+                                    ))}
+                                </div>
+                                    }
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Quận/Huyện</label>
                                     <Select
@@ -513,7 +552,7 @@ export default function DashboardSurvey() {
                             <span className="text-sm text-muted-foreground">({totalPages} bản ghi)</span>
                         </div>
                         <Button 
-                            onClick={() => window.open(`${API.users}/export_filter?province_id=${filters.ProvinceId}&ward_id=${filters.WardId}&survey_status=${filters.SurveyStatus}&survey_id=${survey_id}&is_member=${filters.IsMember}`, "_blank")}
+                            onClick={() => window.open(`${API.users}/export_filter?province_id=${Cookies.get("userRole") === "LMHTX" ? Cookies.get("provinceId") : filters.ProvinceId}&ward_id=${filters.WardId}&survey_status=${filters.SurveyStatus}&survey_id=${survey_id}&is_member=${filters.IsMember}`, "_blank")}
                             className="flex items-center gap-2"
                         >
                             <Download className="h-4 w-4" />

@@ -20,7 +20,7 @@ exports.getSurveysYears = async (req, res) => {
 }
 exports.getSurveysProgress = async (req, res) => { 
     try {
-        const { id, year, is_member } = req.query;
+        const { id, year, is_member, province_id } = req.query;
 
         if (!id && !year) {
             return res.status(400).json({ message: "Cần truyền 'id' hoặc 'year'" });
@@ -31,6 +31,8 @@ exports.getSurveysProgress = async (req, res) => {
             : `YEAR(Surveys.StartTime) = ${year}`;
 
         const is_member_value = is_member ? is_member === 'true' ? `AND Users.IsMember = 1` : `AND Users.IsMember = 0` : '';
+
+        const province_value = province_id ? `AND Users.ProvinceId = ${province_id}` : '';
 
         const surveys = await sequelize.query(`
             SELECT 
@@ -44,6 +46,7 @@ exports.getSurveysProgress = async (req, res) => {
                     WHERE Users.Role IN ('HTX', 'QTD') 
                     AND SurveyAccessRules.SurveyId = Surveys.Id
                     ${is_member_value}
+                    ${province_value}
                 ) AS totalNum,
                 -- Số người đã hoàn thành khảo sát
                 (
@@ -56,6 +59,7 @@ exports.getSurveysProgress = async (req, res) => {
                     AND UserSurveyStatus.SurveyId = Surveys.Id
                     AND UserSurveyStatus.SurveyTime IS NOT NULL
                     ${is_member_value}
+                    ${province_value}
                 ) AS finishedNum
             FROM Surveys
             LEFT JOIN Questions ON Questions.SurveyId = Surveys.Id
@@ -304,11 +308,13 @@ exports.bulkCreateSurveys = async (req, res) => {
 
 exports.exportSurveysProgress = async (req, res) => {
     try {
-        const { year } = req.query;
+        const { year, province_id } = req.query;
 
         if (!year) {
             return res.status(400).json({ message: "Cần truyền 'year'" });
         }
+
+        const province_value = province_id ? `AND Users.ProvinceId = ${province_id}` : '';
 
         const surveys = await sequelize.query(`
             SELECT 
@@ -320,6 +326,7 @@ exports.exportSurveysProgress = async (req, res) => {
                     JOIN SurveyAccessRules ON Users.Role = SurveyAccessRules.Role AND Users.Type = SurveyAccessRules.Type
                     WHERE Users.Role IN ('HTX', 'QTD') 
                     AND SurveyAccessRules.SurveyId = Surveys.Id
+                    ${province_value}
                 ) AS totalNum,
                 (
                     SELECT COUNT(DISTINCT Users.Id)
@@ -330,6 +337,7 @@ exports.exportSurveysProgress = async (req, res) => {
                     AND SurveyAccessRules.SurveyId = Surveys.Id
                     AND UserSurveyStatus.SurveyId = Surveys.Id
                     AND UserSurveyStatus.SurveyTime IS NOT NULL
+                    ${province_value}
                 ) AS finishedNum
             FROM Surveys
             LEFT JOIN Questions ON Questions.SurveyId = Surveys.Id
@@ -381,7 +389,7 @@ exports.exportSurveysProgress = async (req, res) => {
 
 exports.getQuestionAnswerStats = async (req, res) => {
     try {
-        const { year, survey_id, page = 1, limit = 10 } = req.query;
+        const { year, survey_id, page = 1, limit = 10, province_id } = req.query;
 
         if (!year && !survey_id) {
             return res.status(400).json({ message: "Cần truyền 'year' hoặc 'survey_id'" });
@@ -390,6 +398,8 @@ exports.getQuestionAnswerStats = async (req, res) => {
         const whereClause = survey_id 
             ? `Questions.SurveyId = ${survey_id}` 
             : `YEAR(Surveys.StartTime) = ${year}`;
+
+        const province_value = province_id ? ` AND Users.ProvinceId = ${province_id}` : '';
 
         // Get total count
         const totalResult = await sequelize.query(`
@@ -404,20 +414,24 @@ exports.getQuestionAnswerStats = async (req, res) => {
         // Get paginated data
         const stats = await sequelize.query(`
             SELECT 
-                Questions.Id as QuestionId,
+                Questions.Id AS QuestionId,
                 Questions.QuestionContent,
-                Surveys.Id as SurveyId,
-                Surveys.Title as SurveyTitle,
-                COUNT(CASE WHEN Results.Answer = 1 THEN 1 END) as NotSatisfied,
-                COUNT(CASE WHEN Results.Answer = 3 THEN 1 END) as PartiallySatisfied,
-                COUNT(CASE WHEN Results.Answer = 5 THEN 1 END) as Satisfied,
-                COUNT(Results.Answer) as TotalAnswers
+                Surveys.Id AS SurveyId,
+                Surveys.Title AS SurveyTitle,
+                COUNT(CASE WHEN Results.Answer = 1${province_value} THEN 1 END) AS NotSatisfied,
+                COUNT(CASE WHEN Results.Answer = 3${province_value} THEN 1 END) AS PartiallySatisfied,
+                COUNT(CASE WHEN Results.Answer = 5${province_value} THEN 1 END) AS Satisfied,
+                COUNT(CASE WHEN Users.Address LIKE '%%'${province_value} THEN 1 END) AS TotalAnswers
             FROM Questions
             JOIN Surveys ON Questions.SurveyId = Surveys.Id
             LEFT JOIN Results ON Questions.Id = Results.QuestionId
+            LEFT JOIN Users ON Results.UserId = Users.Id
             WHERE ${whereClause}
-            GROUP BY Questions.Id, Questions.QuestionContent, Surveys.Id, Surveys.Title
-            ORDER BY Surveys.Id, Questions.Id
+            GROUP BY 
+                Questions.Id, Questions.QuestionContent, 
+                Surveys.Id, Surveys.Title
+            ORDER BY 
+                Surveys.Id, Questions.Id
             OFFSET (${page} - 1) * ${limit} ROWS
             FETCH NEXT ${limit} ROWS ONLY
         `, { type: sequelize.QueryTypes.SELECT });

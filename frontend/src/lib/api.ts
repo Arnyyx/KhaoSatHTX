@@ -183,6 +183,16 @@ export const provinceService = {
         return response.data;
     },
     
+    getProvinceRankings: async () => {
+        const response = await axios.get(`${BASE_URL}/provinces/rankings`);
+        return response.data;
+    },
+
+    getProvinceSurveyCompletionStats: async () => {
+        const response = await axios.get(`${BASE_URL}/provinces/survey-completion-stats`);
+        return response.data;
+    },
+    
     exportDynamic: async (data: {
         columns: Array<{ header: string; key: string; width?: number }>;
         data: Array<Record<string, any>>;

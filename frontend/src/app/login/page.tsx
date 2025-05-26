@@ -41,6 +41,7 @@ export default function LoginPage() {
         Cookies.set("token", data.token, { expires: 1 });
         Cookies.set("userRole", data.user.Role, { expires: 1 });
         Cookies.set("userId", data.user.Id.toString(), { expires: 1 });
+        Cookies.set("provinceId", data.user.ProvinceId.toString(), { expires: 1 });
 
         toast.success("Đăng nhập thành công");
 

@@ -1,6 +1,8 @@
 "use client"
 
 import { useSearchParams } from "next/navigation";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import { use, useEffect, useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -71,7 +73,9 @@ export default function DashboardProgress() {
             if (isMemberFilter !== "all") {
                 queryParams.append('is_member', isMemberFilter);
             }
-
+            if (Cookies.get("userRole") === "LMHTX") {
+                queryParams.append('province_id', Cookies.get("provinceId") || "");
+            }
             const surveyRes = await fetch(`${API.surveys}/progress?${queryParams.toString()}`);
             const surveyData = await surveyRes.json();
             setSurveyInfo(surveyData.surveys);
@@ -95,6 +99,9 @@ export default function DashboardProgress() {
 
             if (surveyStatusFilter !== "all") {
                 queryParams.append('survey_status', surveyStatusFilter);
+            }
+            if (Cookies.get("userRole") === "LMHTX") {
+                queryParams.append('province_id', Cookies.get("provinceId") || "");
             }
 
             const userRes = await fetch(`${API.users}/survey?${queryParams.toString()}`);
@@ -129,7 +136,8 @@ export default function DashboardProgress() {
 
     const handleExportProgress = async () => {
         try {
-            const response = await fetch(`${API.surveys}/progress/export?year=${year}`, {
+            const query = Cookies.get("userRole") === "LMHTX" ? `&province_id=${Cookies.get("provinceId")}` : "";
+            const response = await fetch(`${API.surveys}/progress/export?year=${year}${query}`, {
                 method: 'GET',
             });
             
@@ -159,7 +167,9 @@ export default function DashboardProgress() {
             if (isMemberFilter !== "all") {
                 queryParams.append('is_member', isMemberFilter);
             }
-
+            if (Cookies.get("userRole") === "LMHTX") {
+                queryParams.append('province_id', Cookies.get("provinceId") || "");
+            }
             const response = await fetch(`${API.users}/survey/export?${queryParams.toString()}`, {
                 method: 'GET',
             });
@@ -180,6 +190,23 @@ export default function DashboardProgress() {
             toast.error('Failed to export users data');
         }
     };
+    const router = useRouter();
+    useEffect(() => {
+        const userId = Cookies.get("userId");
+        const userR = Cookies.get("userRole");
+    
+        if (!userId || !userR) {
+        toast.error("Vui lòng đăng nhập để xem thông tin");
+        router.push("/login");
+        return;
+        }
+    
+        // Redirect non-admin users to regular profile
+        if (userR === "HTX" || userR === "QTD") {
+            router.push("/profile");
+            return;
+        }
+    }, [router]);
 
     return (
         <div className="p-6">
@@ -217,6 +244,26 @@ export default function DashboardProgress() {
                                     <Tooltip />
                                 </PieChart>
                             </ResponsiveContainer>
+                            
+                        </div>
+                        <div>
+                            <Card className="mb-6">
+                                <CardHeader>
+                                    <CardTitle>Thống kê HTX hoàn thành khảo sát</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-4 bg-green-50 rounded-lg">
+                                            <h3 className="text-lg font-semibold text-green-800">Đã hoàn thành</h3>
+                                            <p className="text-2xl font-bold text-green-900">{surveyInfo.reduce((sum, item) => sum + item.finishedNum, 0)} HTX</p>
+                                        </div>
+                                        <div className="p-4 bg-red-50 rounded-lg">
+                                            <h3 className="text-lg font-semibold text-red-800">Chưa hoàn thành</h3>
+                                            <p className="text-2xl font-bold text-red-900">{surveyInfo.reduce((sum, item) => sum + item.totalNum, 0)} HTX</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </CardContent>
                 </Card>

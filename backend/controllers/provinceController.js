@@ -30,6 +30,11 @@ exports.getProvincesUsersNum = async (req, res) => {
         res.status(400).json({ message: "Lỗi khi lấy Tỉnh", error: error.message });
     }
 };
+exports.getProvinceById = async (req, res) => {
+    const { id } = req.params;
+    const province = await Province.findByPk(id);
+    res.status(200).json({ total: 1, items: [province] });
+};
 exports.getAllProvinces = async (req, res) => {
     try {
         const { page, limit, search } = req.query;
@@ -319,3 +324,45 @@ exports.getProvinceSurveyStatsByYear = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
+exports.getProvinceRankings = async (req, res) => {
+    try {
+        const results = await sequelize.query(`
+            SELECT 
+                P.Id,
+                P.Name,
+                P.Region,
+                MIN(USS.SurveyTime) as FirstSurveyTime,
+                COUNT(DISTINCT U.Id) as TotalUsers,
+                COUNT(DISTINCT CASE WHEN U.IsMember = 1 THEN U.Id END) as TotalMembers
+            FROM Provinces P
+            LEFT JOIN Users U ON P.Id = U.ProvinceId AND U.Role = 'LMHTX'
+            LEFT JOIN UserSurveyStatus USS ON U.Id = USS.UserId
+            GROUP BY P.Id, P.Name, P.Region
+            ORDER BY FirstSurveyTime ASC
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error("Error in getProvinceRankings:", error);
+        res.status(400).json({ message: "Lỗi khi lấy xếp hạng tỉnh", error: error.message });
+    }
+};
+
+exports.getProvinceSurveyCompletionStats = async (req, res) => {
+    try {
+        const results = await sequelize.query(`
+            SELECT 
+                COUNT(DISTINCT CASE WHEN USS.SurveyTime IS NOT NULL THEN P.Id END) as CompletedProvinces,
+                COUNT(DISTINCT CASE WHEN USS.SurveyTime IS NULL THEN P.Id END) as UncompletedProvinces
+            FROM Provinces P
+            LEFT JOIN Users U ON P.Id = U.ProvinceId AND U.Role = 'LMHTX'
+            LEFT JOIN UserSurveyStatus USS ON U.Id = USS.UserId
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        res.status(200).json(results[0]);
+    } catch (error) {
+        console.error("Error in getProvinceSurveyCompletionStats:", error);
+        res.status(400).json({ message: "Lỗi khi lấy thống kê hoàn thành khảo sát", error: error.message });
+    }
+};
