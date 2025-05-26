@@ -8,17 +8,12 @@ import { FaCheckCircle, FaComments, FaProjectDiagram, FaCogs, FaPen, FaClipboard
 import Image from "next/image";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
-
-
 const newsItems = [
   {
     title: "TIÊU ĐỀ TIN TỨC",
     description:
       "Căn cứ Kế hoạch số  /KH-BTV ngày  / 2025 của Ban Thường vụ Liên minh Hợp tác xã Việt Nam về việc Khảo sát đánh giá mức độ hài lòng của hợp tác xã (HTX) đối với chính quyền địa phương năm 2024",
-    image: "/assets/img/UBKT_2025_TEM-05.jpg", // th
-    // 
-    // 
-    // ay bằng đường dẫn ảnh thật
+    image: "/assets/img/UBKT_2025_TEM-05.jpg",
   },
   {
     title: "TIÊU ĐỀ TIN TỨC",
@@ -99,8 +94,6 @@ export default function HomePage() {
         <title>Hệ thống quản lý HTX</title>
       </Head>
 
-   
-       
 
       <div className="hero-section">
         <div className="hero-content">
@@ -130,7 +123,7 @@ export default function HomePage() {
           <div className="col style={{ width:'40%' }} ">
             <div className="border p-3">
               <div className="text-center fw-bold bg-light py-2 title_survey flex justify-center">THEO SỐ LƯỢNG HỢP TÁC XÃ KHẢO SÁT</div>
-              <div className=" justify-content-between flex-nowrap overflow-auto d-flex gap-4"  style={{ display: 'flex',}}>
+              <div className=" justify-content-between flex-nowrap overflow-auto d-flex gap-4" style={{ display: 'flex', }}>
                 {/* Biểu đồ 1 */}
                 <div className="text-center w-250">
                   <div className="chart-circle" style={{ color: "#fbc02d", background: "conic-gradient(#fbc02d 45%, #eee 0)" }}>
@@ -145,7 +138,7 @@ export default function HomePage() {
 
                 {/* Biểu đồ 2 */}
                 <div className="text-center w-250">
-                  <div className="chart-circle"   style={{ color: "#e53935", background: "conic-gradient(#e53935 60%, #eee 0)" }}>
+                  <div className="chart-circle" style={{ color: "#e53935", background: "conic-gradient(#e53935 60%, #eee 0)" }}>
                     <h3>60%</h3>
                     <p>00.000/00.000</p>
                   </div>
@@ -159,21 +152,21 @@ export default function HomePage() {
           </div>
 
           {/* Nhóm 2: Phiếu khảo sát */}
-          <div className="col  "style={{ width:'60%' }}>
+          <div className="col  " style={{ width: '60%' }}>
             <div className="border p-3">
               <div className="text-center fw-bold bg-light py-2 title_survey">THEO SỐ LƯỢNG PHIẾU KHẢO SÁT</div>
-              <div className="d-flex  " style={{ display: 'flex',}}>
+              <div className="d-flex  " style={{ display: 'flex', }}>
                 {/* Biểu đồ 3 */}
-   
+
                 <div className="text-center w-250">
-                    <div className="chart-circle"style={{ color: "#fbc02d", background: "conic-gradient(#fbc02d 45%, #eee 0)" }}>
+                  <div className="chart-circle" style={{ color: "#fbc02d", background: "conic-gradient(#fbc02d 45%, #eee 0)" }}>
                     <h3>45%</h3>
                     <p>00.000/00.000</p>
-                    </div>
-                    <h6 className="fw-bold">HÀI LÒNG </h6>
-                    <p className="text-muted small">
+                  </div>
+                  <h6 className="fw-bold">HÀI LÒNG </h6>
+                  <p className="text-muted small">
                     consectetuer adipiscing elit, sed diam nonummy nibh euismod
-                    </p>
+                  </p>
                 </div>
 
                 {/* Biểu đồ 4 */}
@@ -207,98 +200,96 @@ export default function HomePage() {
       </section>
 
 
-
-      
-<div className="bg-gray-100 py-10 px-4 ">
-      <h2 className="text-center text-2xl font-bold  text-center survey   m-5">HƯỚNG DẪN KHẢO SÁT</h2>
-      <div className="flex justify-center items-start  flex-wrap md:flex-nowrap">
-        {steps.map((step) => (
-          <div key={step.id} className="flex flex-col items-center text-center relative survey_instruc">
-            {/* Circle + icon */}
-            <div className="w-28 h-28 rounded-full border-2 border-gray-300 flex flex-col items-center justify-center relative bg-white">
-              <div className="absolute -top-3 -left-3 bg-yellow-400 text-black rounded-full w-6 h-6 text-xs flex items-center justify-center font-bold top-left">
-                {step.id}
+      <div className="bg-gray-100 py-10 px-4 ">
+        <h2 className="text-center text-2xl font-bold  text-center survey   m-5">HƯỚNG DẪN KHẢO SÁT</h2>
+        <div className="flex justify-center items-start  flex-wrap md:flex-nowrap">
+          {steps.map((step) => (
+            <div key={step.id} className="flex flex-col items-center text-center relative survey_instruc">
+              {/* Circle + icon */}
+              <div className="w-28 h-28 rounded-full border-2 border-gray-300 flex flex-col items-center justify-center relative bg-white">
+                <div className="absolute -top-3 -left-3 bg-yellow-400 text-black rounded-full w-6 h-6 text-xs flex items-center justify-center font-bold top-left">
+                  {step.id}
+                </div>
+                {step.icon}
               </div>
-              {step.icon}
+
+              {/* Content */}
+              <div className="mt-4 max-w-[180px]">
+                <h4 className="font-bold text-sm">{step.title}</h4>
+                <p className="text-xs text-gray-600 mt-1">{step.desc}</p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className=" text-red px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Xem tiếp
+                </button>
+
+              </div>
+
+              {/* Line (except last step) */}
+              {step.id < steps.length && (
+                <div className="hidden md:block absolute top-14 right-[-60px] w-[113px] h-0.5 bg-gray-300 z-0"></div>
+              )}
             </div>
-
-            {/* Content */}
-            <div className="mt-4 max-w-[180px]">
-              <h4 className="font-bold text-sm">{step.title}</h4>
-              <p className="text-xs text-gray-600 mt-1">{step.desc}</p>
-                 <button
-        onClick={() => setShowModal(true)}
-        className=" text-red px-4 py-2 rounded hover:bg-blue-700"
-      >
-        Xem tiếp
-      </button>
-              
-            </div>
-
-            {/* Line (except last step) */}
-            {step.id < steps.length && (
-              <div className="hidden md:block absolute top-14 right-[-60px] w-[113px] h-0.5 bg-gray-300 z-0"></div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-
-
-
-<div className=" items-center justify-center  bg-[#403d94]  p-5">
-  <h2  className="text-center text-2xl font-bold   survey  text-white">KHẢO SÁT</h2>
-     <div className="flex items-center justify-center">
-       <form className="flex space-x-4 items-center">
-       
-        <input
-          type="text"
-          placeholder="TÊN ĐĂNG NHẬP"
-          className="px-4 py-2 rounded-md text-gray-700 placeholder-gray-600 focus:outline-none bg-white"
-        />
-        <input
-          type="password"
-          placeholder="MẬT KHẨU"
-          className="px-4 py-2 rounded-md text-gray-700 placeholder-gray-600 focus:outline-none bg-white"
-        />
-        <button
-          type="submit"
-          className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-md shadow"
-        >
-          ĐĂNG NHẬP
-        </button>
-      </form>
-     </div>
-    </div>
-
-
-
-<section className="py-10 px-4 max-w-screen-xl mx-auto">
-  <h2 className="text-2xl font-bold text-center mb-8">TIN TỨC</h2>
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-    {newsItems.map((item, index) => (
-      <div key={index} className="text-center w-64">
-        <div className="w-64 h-64 overflow-hidden rounded-md relative cover">
-          <Image
-            src={item.image}
-            alt="news image"
-            width={256}
-            height={256}
-            
-          />
+          ))}
         </div>
-        <h3 className="font-bold mt-4 mb-2">{item.title}</h3>
-        <p className="text-sm text-gray-700">{item.description}</p>
       </div>
-    ))}
-  </div>
-</section>
+
+
+
+      <div className=" items-center justify-center  bg-[#403d94]  p-5">
+        <h2 className="text-center text-2xl font-bold   survey  text-white">KHẢO SÁT</h2>
+        <div className="flex items-center justify-center">
+          <form className="flex space-x-4 items-center">
+
+            <input
+              type="text"
+              placeholder="TÊN ĐĂNG NHẬP"
+              className="px-4 py-2 rounded-md text-gray-700 placeholder-gray-600 focus:outline-none bg-white"
+            />
+            <input
+              type="password"
+              placeholder="MẬT KHẨU"
+              className="px-4 py-2 rounded-md text-gray-700 placeholder-gray-600 focus:outline-none bg-white"
+            />
+            <button
+              type="submit"
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-md shadow"
+            >
+              ĐĂNG NHẬP
+            </button>
+          </form>
+        </div>
+      </div>
+
+
+
+      <section className="py-10 px-4 max-w-screen-xl mx-auto">
+        <h2 className="text-2xl font-bold text-center mb-8">TIN TỨC</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {newsItems.map((item, index) => (
+            <div key={index} className="text-center w-64">
+              <div className="w-64 h-64 overflow-hidden rounded-md relative cover">
+                <Image
+                  src={item.image}
+                  alt="news image"
+                  width={256}
+                  height={256}
+
+                />
+              </div>
+              <h3 className="font-bold mt-4 mb-2">{item.title}</h3>
+              <p className="text-sm text-gray-700">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
 
 
 
 
- 
+
 
       {/* CSS thêm để giả lập donut chart (mô phỏng tĩnh theo hình bạn cung cấp) */}
       <style jsx>{`

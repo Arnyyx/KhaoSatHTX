@@ -27,7 +27,7 @@ export function QuestionForm({ initialData, onSubmit, onCancel }: QuestionFormPr
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.QuestionContent.trim()) {
-            toast.error("Question content is required");
+            toast.error("Nội dung câu hỏi là bắt buộc");
             return;
         }
         setIsSubmitting(true);
@@ -41,14 +41,14 @@ export function QuestionForm({ initialData, onSubmit, onCancel }: QuestionFormPr
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <Label htmlFor="questionContent">Question Content</Label>
+                <Label htmlFor="questionContent">Nội dung câu hỏi</Label>
                 <Textarea
                     id="questionContent"
                     value={formData.QuestionContent}
                     onChange={(e) =>
                         setFormData({ ...formData, QuestionContent: e.target.value })
                     }
-                    placeholder="Enter question content"
+                    placeholder="Nhập nội dung câu hỏi"
                     className="mt-1"
                     rows={4}
                 />
@@ -61,16 +61,16 @@ export function QuestionForm({ initialData, onSubmit, onCancel }: QuestionFormPr
                     onClick={onCancel}
                     disabled={isSubmitting}
                 >
-                    Cancel
+                    Hủy
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {initialData?.Id ? "Updating..." : "Creating..."}
+                            {initialData?.Id ? "Đang cập nhật..." : "Đang tạo..."}
                         </>
                     ) : (
-                        <>{initialData?.Id ? "Update" : "Create"}</>
+                        <>{initialData?.Id ? "Cập nhật" : "Tạo"}</>
                     )}
                 </Button>
             </div>
