@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 
 interface Survey {
@@ -16,10 +17,20 @@ interface Question {
   Id: number;
   QuestionContent: string;
 }
+interface Result {
+  Id: number;
+  UserId: number;
+  QuestionId: number;
+  Answer: number;
+}
 
 export default function SurveyPage() {
+  const searchParams = useSearchParams();
+  const id = Number(searchParams.get("id"));
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [isLocked, setIsLocked] = useState(false);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +38,8 @@ export default function SurveyPage() {
   const router = useRouter();
 
   const answerValueMap: { [key: string]: number } = {
-    "Rất hài lòng": 10,
-    "Hài lòng": 5,
+    "Rất hài lòng": 5,
+    "Hài lòng": 3,
     "Không hài lòng": 1,
   };
 
@@ -42,25 +53,29 @@ export default function SurveyPage() {
 
     const fetchData = async () => {
       try {
-        const userRes = await fetch(`${API.users}/${ID_user}`);
+        const userRes = await fetch(`${API.users}/survey/status?survey_id=${id}&user_id=${ID_user}`);
         if (!userRes.ok) throw new Error("Không lấy được thông tin người dùng.");
         const profile = await userRes.json();
-
-        const role = profile.user.Role?.toLowerCase();
-        const type = profile.user.Type?.toLowerCase();
-
-        // const surveyId = role === "htx" ? type === "nn" ? 1 : type === "pnn" ? 3 : undefined : role === "qtd" ? 2 : undefined;
-
-        // if (!surveyId) throw new Error("Không xác định được vai trò người dùng.");
+        if (profile.IsLocked) {
+          if (profile.SurveyTime !== null) {
+            const resultRes = await fetch(`${API.result}?survey_id=${id}&user_id=${ID_user}`);
+            if (!resultRes.ok) throw new Error("Không lấy được kết quả khảo sát.");
+            const resultData = await resultRes.json();
+            setResults(resultData.data);
+            setIsLocked(true);
+          } else {
+            setIsLocked(true);
+          }
+        }
 
         const [surveyRes] = await Promise.all([
-          fetch(`${API.surveys}/by_role?role=${role}&type=${type}`),
+          fetch(`${API.surveys}/${id}`),
         ]);   
         if (!surveyRes.ok) throw new Error("Không thể lấy thông tin khảo sát.");
         const surveyData = await surveyRes.json(); 
 
         const [questionRes] = await Promise.all([
-          fetch(`${API.questions}/by-survey?surveyId=${surveyData.surveys[0].Id}`),
+          fetch(`${API.questions}/by-survey?surveyId=${id}`),
         ]);
         if (!questionRes.ok) throw new Error("Không thể lấy danh sách câu hỏi.");
         const questionData = await questionRes.json();    
@@ -68,7 +83,7 @@ export default function SurveyPage() {
         if (!Array.isArray(questionData.data)) throw new Error("Dữ liệu câu hỏi không hợp lệ.");
 
         setQuestions(questionData.data);
-        setSurvey(surveyData.surveys[0]);
+        setSurvey(surveyData.survey);
       } catch (err: any) {
         console.error("❌ Lỗi khi tải dữ liệu khảo sát:", err);
         setError(err.message || "Đã xảy ra lỗi.");
@@ -163,6 +178,7 @@ export default function SurveyPage() {
                       name={`question-${q.Id}`}
                       value={option}
                       checked={answers[q.Id] === option}
+                      disabled={isLocked}
                       onChange={() =>
                         setAnswers((prev) => ({ ...prev, [q.Id]: option }))
                       }
@@ -182,6 +198,7 @@ export default function SurveyPage() {
       <button
         className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl"
         onClick={handleSubmit}
+        disabled={isLocked}
       >
         Hoàn thành khảo sát
       </button>

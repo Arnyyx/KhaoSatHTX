@@ -8,6 +8,7 @@ router.get("/province", userController.getUsersByProvince);
 router.get("/check-username", userController.checkUsername);
 router.get("/export_filter/", userController.exportFilteredUser);
 router.get("/survey", userController.getUserBySurvey);
+router.get("/survey/status", userController.getUserSurveyStatus);
 router.get("/survey/export", userController.exportUsersBySurvey);
 router.get("/total-by-member", userController.getTotalUsersByMemberStatus);
 router.get("/role_number", userController.getRoleNumber);

@@ -34,10 +34,10 @@ exports.submitAnswer = async (req, res) => {
         }
 
         // Cập nhật trạng thái user
-        await User.update(
-            { IsLocked: true, SurveyStatus: 1 },
-            { where: { Id: UserId }, transaction }
-        );
+        // await User.update(
+        //     { IsLocked: true, SurveyStatus: 1 },
+        //     { where: { Id: UserId }, transaction }
+        // );
 
         await transaction.commit();
         return res.status(200).json({ success: true, message: "Lưu khảo sát thành công." });
@@ -48,3 +48,26 @@ exports.submitAnswer = async (req, res) => {
         return res.status(500).json({ success: false, message: "Lỗi khi lưu khảo sát." });
     }
 };
+const { Question } = require("../models");
+exports.getResults = async (req, res) => {
+    try {
+        const { survey_id, user_id } = req.query;
+        const questions = await Question.findAll({
+            where: { SurveyId: survey_id },
+            raw: true // thêm dòng này  
+        });
+        const questionIds = questions.map(question => question.Id);
+        const results = await Result.findAll({
+            where: { 
+                QuestionId: {
+                    [Op.in]: questionIds
+                }, 
+                UserId: user_id,
+            }
+        });
+        res.status(200).json(results);
+    } catch (err) {
+        console.error("Chi tiết lỗi:", err);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy kết quả khảo sát." });
+    }
+}

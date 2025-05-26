@@ -83,7 +83,7 @@ exports.getSurveysByRole = async (req, res) => {
             include: [
                 {
                     model: SurveyAccessRule,
-                    as: "SurveyAccessRules",
+                    as: "AccessRules",
                     where: {
                         Role: role,
                         Type: type,

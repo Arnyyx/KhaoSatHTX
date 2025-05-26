@@ -13,7 +13,7 @@ const userQueue = require("../queue/userQueue");
 const { mapExcelHeaders, checkRequiredHeaders, validateUserData } = require("../utils/userUtils");
 const { formatDateToDDMMYYYY, parseDateFromDDMMYYYY } = require("../utils/dateUtils");
 const jwt = require('jsonwebtoken');
-const { Survey } = require("../models");
+const { Survey, UserSurveyStatus } = require("../models");
 
 exports.getAllUsers = async (req, res) => {
     try {
@@ -270,21 +270,11 @@ exports.userLogin = async (req, res) => {
             where: {
                 Username: username,
                 Password: password
-            }
+            },
         });
 
         if (!user) {
             return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
-        }
-
-        const isLocked = user.IsLocked === true || user.IsLocked === 1;
-        const surveyStatus = user.SurveyStatus === true || user.SurveyStatus === 1;
-
-        if (isLocked) {
-            const message = surveyStatus
-                ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
-                : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
-            return res.json({ success: false, message });
         }
 
         res.cookie('ID_user', user.Id, {
@@ -501,70 +491,70 @@ exports.logout = (req, res) => {
     }
 };
 
-exports.userLogin = async (req, res) => {
-    const { username, password } = req.body;
+// exports.userLogin = async (req, res) => {
+//     const { username, password } = req.body;
 
-    try {
-        const user = await User.findOne({
-            where: {
-                Username: username,
-                Password: password
-            },
-            include: [
-                { association: "SurveyStatuses" },
-            ],
-        });
+//     try {
+//         const user = await User.findOne({
+//             where: {
+//                 Username: username,
+//                 Password: password
+//             },
+//             include: [
+//                 { association: "SurveyStatuses" },
+//             ],
+//         });
 
-        if (!user) {
-            return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
-        }
+//         if (!user) {
+//             return res.json({ success: false, message: "Sai tài khoản hoặc mật khẩu." });
+//         }
 
-        const isLocked = user.UserSurveyStatus && (user.UserSurveyStatus.IsLocked === true || user.UserSurveyStatus.IsLocked === 1);
-        const surveyTime = user.UserSurveyStatus ? user.UserSurveyStatus.SurveyTime : null;
+//         const isLocked = user.UserSurveyStatus && (user.UserSurveyStatus.IsLocked === true || user.UserSurveyStatus.IsLocked === 1);
+//         const surveyTime = user.UserSurveyStatus ? user.UserSurveyStatus.SurveyTime : null;
 
-        if (isLocked) {
-            const message = surveyTime !== null
-                ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
-                : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
-            return res.json({ success: false, message });
-        }
+//         if (isLocked) {
+//             const message = surveyTime !== null
+//                 ? "Tài khoản đã làm khảo sát thành công và đã bị khóa."
+//                 : "Tài khoản chưa hoàn thành khảo sát và đã bị khóa.";
+//             return res.json({ success: false, message });
+//         }
 
-        res.cookie('ID_user', user.Id, {
-            httpOnly: false,
-            sameSite: 'Lax',
-            secure: false,
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+//         res.cookie('ID_user', user.Id, {
+//             httpOnly: false,
+//             sameSite: 'Lax',
+//             secure: false,
+//             maxAge: 7 * 24 * 60 * 60 * 1000
+//         });
 
-        res.cookie('role', user.Role.toLowerCase(), {
-            httpOnly: false,
-            sameSite: 'Lax',
-            secure: false,
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+//         res.cookie('role', user.Role.toLowerCase(), {
+//             httpOnly: false,
+//             sameSite: 'Lax',
+//             secure: false,
+//             maxAge: 7 * 24 * 60 * 60 * 1000
+//         });
 
-        const payload = {
-            id: user.Id,
-            username: user.Username,
-            role: user.Role,
-        };
+//         const payload = {
+//             id: user.Id,
+//             username: user.Username,
+//             role: user.Role,
+//         };
 
-        const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
+//         const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '1h' });
 
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: false,
-            sameSite: 'Lax',
-            maxAge: 3600 * 1000, // 1 giờ
-        });
+//         res.cookie('token', token, {
+//             httpOnly: true,
+//             secure: false,
+//             sameSite: 'Lax',
+//             maxAge: 3600 * 1000, // 1 giờ
+//         });
 
 
-        return res.json({ success: true, user });
-    } catch (err) {
-        console.error('Login error:', err);
-        return res.status(500).send('Server Error');
-    }
-};
+//         return res.json({ success: true, user });
+//     } catch (err) {
+//         console.error('Login error:', err);
+//         return res.status(500).send('Server Error');
+//     }
+// };
 
 exports.exportUsers = async (req, res) => {
     try {
@@ -1080,3 +1070,17 @@ exports.deleteMultipleUsers = async (req, res) => {
         });
     }
 };
+exports.getUserSurveyStatus = async (req, res) => {
+    try {
+        const { survey_id, user_id } = req.query;
+        const user = await UserSurveyStatus.findOne({
+            where: {
+                SurveyId: survey_id,
+                UserId: user_id
+            }
+        });
+        res.status(200).json(user);
+    } catch (error) {
+        console.error("Error in getSurveyStatus:", error);
+    }
+}
