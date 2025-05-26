@@ -1,189 +1,102 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { LogOut, User } from "lucide-react";
-import Cookies from "js-cookie";
-import { toast } from "sonner";
-import { logout } from "@/app/apis/logout";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { useEffect, useState } from "react";
-
-// Custom hook to listen for cookie changes
-function useCookieChange(cookieName: string) {
-    const [value, setValue] = useState<string | undefined>(undefined);
-
-    useEffect(() => {
-        const checkCookie = () => {
-            const cookieValue = Cookies.get(cookieName);
-            setValue(cookieValue);
-        };
-
-        // Check initially
-        checkCookie();
-
-        // Set up an interval to check for changes
-        const interval = setInterval(checkCookie, 1000);
-
-        return () => clearInterval(interval);
-    }, [cookieName]);
-
-    return value;
-}
+import { useEffect } from "react";
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 export function Header() {
-    const router = useRouter();
-    const userRole = useCookieChange("userRole");
+  useEffect(() => {
+    import("bootstrap/dist/js/bootstrap.bundle.min.js");
+  }, []);
 
-    const handleLogout = async () => {
-        try {
-            const data = await logout();
-            if (data.success) {
-                Cookies.remove("token");
-                Cookies.remove("userRole");
-                Cookies.remove("userId");
-                toast.success("Đăng xuất thành công");
-                router.push("/login");
-            } else {
-                toast.error(data.message || "Đăng xuất thất bại");
-            }
-        } catch (error) {
-            toast.error("Có lỗi xảy ra khi đăng xuất");
-        }
-    };
-
-    const getNavigationItems = () => {
-        switch (userRole) {
-            case "admin":
-                return [
-                    { label: "Thông tin cá nhân", href: "/admin/profile" },
-                    { label: "Quản lý người dùng", href: "/admin/users" },
-                    { label: "Quản lý khảo sát", href: "/admin/surveys" },
-                    // { label: "Quản lý câu hỏi", href: "/admin/questions" },
-                    { label: "Quản lý tỉnh", href: "/admin/provinces" },
-                    { label: "Quản lý phường/xã", href: "/admin/wards" },
-                ];
-            case "LMHTX":
-                return [
-                    { label: "Thông tin cá nhân", href: "/union/profile" },
-                    { label: "Báo cáo", href: "/union/reports" },
-                    { label: "Quản lý HTX", href: "/union/management" },
-                ];
-            case "HTX":
-                return [{ label: "Làm khảo sát", href: "/survey" }];
-            case "QTD":
-                return [{ label: "Làm khảo sát", href: "/survey" }];
-            default:
-                return [];
-        }
-    };
-
-    return (
-  <div className="header-area">
-    <div style={{ backgroundColor: "#b3e5fc" }}>
-      <div className="header-mid gray-bg menu-wrapper">
-        <div className="row">
-          <div className="row d-flex align-items-center">
-            <div className="col-md-12">
-              <div
-                style={{
-                  width: "1250px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "6px 20px",
-                  fontSize: "16px",
-                  color: "#1a237e",
-                  margin: "0 auto",
-                  fontWeight: 500,
-                }}
-              >
-                <div>Trang thông tin Khảo sát Chỉ số hài lòng cấp tỉnh năm 2024</div>
-                <div>
-                  <i className="fas fa-phone-alt" style={{ marginRight: 6 }}></i>
-                  (+84) 123 456 789
-                </div>
-              </div>
-            </div>
-          </div>
+  return (
+    <header>
+      {/* Hotline chỉ hiện trên PC */}
+      <div className="d-none d-lg-block" style={{ backgroundColor: "#b3e5fc" }}>
+        <div className="container py-2 d-flex justify-content-between align-items-center text-primary" style={{ fontWeight: 500, fontSize: "16px" }}>
+          <div>Trang thông tin Khảo sát Chỉ số hài lòng cấp tỉnh năm 2024</div>
+          <div><i className="fas fa-phone-alt me-2"></i>(+84) 123 456 789</div>
         </div>
       </div>
-    </div>
 
-    <div className="header-bottom header-sticky">
-      <div className="menu-wrapper">
-        <div className="container content-wrapper">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 20px",
-              backgroundColor: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <img
-                src="/assets/img/logo ubkt.svg"
-                alt="Logo"
-                style={{ width: "auto", height: "80px" }}
-              />
-            </div>
-
-            <nav
+      {/* Thanh menu chính */}
+      <nav className="navbar navbar-light bg-white border-bottom py-3">
+        <div className="container d-flex justify-content-between align-items-center">
+          {/* Logo */}
+          <a className="navbar-brand" href="/">
+            <img
+              src="/assets/img/logo ubkt.svg"
+              alt="Logo"
               style={{
-                display: "flex",
-                gap: "24px",
-                fontSize: "18px",
-                fontWeight: 500,
+                height: "90px",
+                objectFit: "contain",
               }}
-            >
-              <a
-                href="/"
-                style={{
-                  color: "#e53935",
-                  textDecoration: "none",
-                  position: "relative",
-                }}
-              >
-                TRANG CHỦ
-                <div
-                  style={{
-                    height: "4px",
-                    backgroundColor: "#2b2d80",
-                    width: "100%",
-                    position: "absolute",
-                    bottom: -10,
-                  }}
-                />
-              </a>
-              <a href="/intro"  style={{ color: "#000", textDecoration: "none" }}   >
-                GIỚI THIỆU
-              </a>
-              <a href="/survey" style={{ color: "#000", textDecoration: "none" }}>
-                KHẢO SÁT
-              </a>
-              <a href="/news" style={{ color: "#000", textDecoration: "none" }}>
-                TIN TỨC
-              </a>
-              <a href="/report" style={{ color: "#000", textDecoration: "none" }}>
-                BÁO CÁO
-              </a>
-              <a href="/login">ĐĂNG NHẬP</a>
-            </nav>
+              className="d-none d-lg-block"
+            />
+            <img
+              src="/assets/img/logo ubkt.svg"
+              alt="Logo"
+              style={{ height: "55px", objectFit: "contain" }}
+              className="d-block d-lg-none"
+            />
+          </a>
+
+          {/* Menu PC */}
+          <div className="d-none d-lg-flex gap-4 fw-medium text-uppercase">
+            <a className="nav-link text-danger" href="/">Trang chủ</a>
+            <a className="nav-link text-dark" href="/intro">Giới thiệu</a>
+            <a className="nav-link text-dark" href="/survey">Khảo sát</a>
+            <a className="nav-link text-dark" href="/news">Tin tức</a>
+            <a className="nav-link text-dark" href="/report">Báo cáo</a>
+            <a className="nav-link text-dark" href="/login">Đăng nhập</a>
           </div>
+
+          {/* Nút menu mobile */}
+          <button
+            className="navbar-toggler d-lg-none"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#mobileMenu"
+            aria-controls="mobileMenu"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Menu Mobile Offcanvas */}
+      <div
+        className="offcanvas offcanvas-end"
+        tabIndex={-1}
+        id="mobileMenu"
+        aria-labelledby="mobileMenuLabel"
+      >
+        <div className="offcanvas-header">
+          <h5 className="offcanvas-title" id="mobileMenuLabel">Menu</h5>
+          <button type="button" className="btn-close" data-bs-dismiss="offcanvas" aria-label="Close" />
+        </div>
+        <div className="offcanvas-body text-uppercase fw-medium">
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <a className="nav-link text-danger" href="/">Trang chủ</a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-dark" href="/intro">Giới thiệu</a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-dark" href="/survey">Khảo sát</a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-dark" href="/news">Tin tức</a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-dark" href="/report">Báo cáo</a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link text-dark" href="/login">Đăng nhập</a>
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
-  </div>
-);
+    </header>
+  );
 }
