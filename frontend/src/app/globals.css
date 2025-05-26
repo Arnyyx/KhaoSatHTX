@@ -219,9 +219,11 @@ justify-content: space-between;
   }
   .survey-title {
     text-align: center;
-    font-size: 28px;
+    font-size: 12px;
     font-weight: bold;
     margin-bottom: 30px;
+    position: relative;
+    top: -32px;
   }
   .survey-group-title {
     font-weight: bold;
@@ -322,4 +324,82 @@ display: flex;
 .blur-background {
   filter: blur(5px);
   transition: filter 0.3s ease-in-out;
+}
+
+
+
+.survey-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+  margin: 0 -10px;
+  align-items: stretch; /* để bù lại padding cột */
+}
+
+.survey-col {
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+.col-40, .col-60 {
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+.col-40 {
+  flex: 0 0 40%;
+  max-width: 40%;
+}
+
+.col-60 {
+  flex: 0 0 60%;
+  max-width: 60%;
+}
+.survey-box {
+height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border: 1px solid #ddd;
+  padding: 16px;
+}
+
+.survey-title {
+  text-align: center;
+  font-weight: bold;
+  background-color: #f8f9fa;
+  padding: 10px;
+ 
+}
+
+.chart-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.chart-item {
+  width: 200px;
+  text-align: center;
+}
+
+.chart-circle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .col-40,
+  .col-60 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
 }

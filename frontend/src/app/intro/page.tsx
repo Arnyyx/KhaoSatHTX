@@ -26,12 +26,20 @@ function CommentSection() {
   return (
     <div className="mt-5">
       {/* Share Buttons */}
-      <div className="d-flex justify-content-end gap-2 mb-3">
-        <a href="#"><img src="/assets/img/facebook.png" alt="Facebook" /></a>
-        <a href="#"><img src="/assets/img/Google-plus-icon.png" alt="Google+" /></a>
-        <a href="#"><img src="/assets/img/tw.png" alt="Twitter" /></a>
-        <a href="#"><img src="/assets/img/zalo.png" alt="Zalo" /></a>
-      </div>
+     <div className="flex justify-end gap-3 mb-3">
+  <a href="#" className="w-12 h-12 flex items-center justify-center border rounded-lg shadow hover:bg-gray-100 transition">
+    <img src="/assets/img/facebook.png" alt="Facebook" className="w-6 h-6" />
+  </a>
+  <a href="#" className="w-12 h-12 flex items-center justify-center border rounded-lg shadow hover:bg-gray-100 transition">
+    <img src="/assets/img/Google-plus-icon.png" alt="Google+" className="w-6 h-6" />
+  </a>
+  <a href="#" className="w-12 h-12 flex items-center justify-center border rounded-lg shadow hover:bg-gray-100 transition">
+    <img src="/assets/img/tw.png" alt="Twitter" className="w-6 h-6" />
+  </a>
+  <a href="#" className="w-12 h-12 flex items-center justify-center border rounded-lg shadow hover:bg-gray-100 transition">
+    <img src="/assets/img/zalo.png" alt="Zalo" className="w-6 h-6" />
+  </a>
+</div>
 
       {/* Comment Section */}
       <div className="border p-3 mb-4">
@@ -139,24 +147,27 @@ export default function HomePage() {
           </div>
 
           {/* Sidebar */}
-          <div className="col-md-4">
-            {[...Array(4)].map((_, i) => (
-              <div className="mb-4 sidebar-item" key={i}>
-                <a href="#">
-                  <img
-                    src="/assets/img/AnhBaiViet.jpg"
-                    alt="Bài viết"
-                    className="img-fluid mb-2"
-                  />
-                </a>
-                <h5 className="mb-0">
-                  <a href="#">
-                    Thúc đẩy chuyển đổi số khu vực kinh tế tập thể, hợp tác xã
-                  </a>
-                </h5>
-              </div>
-            ))}
-          </div>
+     <div className="col-md-4">
+  {[...Array(4)].map((_, i) => (
+    <div className="mb-4 p-3 border rounded shadow-sm bg-white hover-shadow" key={i}>
+      <a href="#" className="d-block overflow-hidden rounded mb-2">
+        <img
+          src="/assets/img/AnhBaiViet.jpg"
+          alt="Bài viết"
+          className="img-fluid rounded hover-zoom"
+          style={{ height: '180px', objectFit: 'cover', width: '100%' }}
+        />
+      </a>
+      <h6 className="mb-0 fw-semibold text-dark">
+        <a href="#" className="text-decoration-none text-dark hover-text-primary">
+          Thúc đẩy chuyển đổi số khu vực kinh tế tập thể, hợp tác xã
+        </a>
+      </h6>
+    </div>
+  ))}
+</div>
+
+
         </div>
       </div>
     </>

@@ -144,64 +144,77 @@ export default function SurveyPage() {
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto bg-white shadow-md rounded-xl">
-      <h1 className="text-2xl font-bold mb-4 text-blue-600">Khảo sát</h1>
-      <p><strong>Tiêu đề:</strong> {survey?.Title}</p>
-      <p><strong>Mô tả:</strong> {survey?.Description}</p>
-      <p><strong>Trạng thái:</strong> {survey?.Status === "true" ? "Đang mở" : "Đã đóng"}</p>
+   <div className="p-4 max-w-6xl mx-auto bg-white shadow-md rounded-xl">
+  <h1 className="text-xl sm:text-2xl font-bold mb-4 text-blue-600 text-center sm:text-left">Khảo sát</h1>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="min-w-full border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th rowSpan={2} className="border border-gray-300 p-2 text-center w-12">TT</th>
-              <th rowSpan={2} className="border border-gray-300 p-2 text-center">Câu hỏi về mức độ hài lòng của hợp tác xã</th>
-              <th colSpan={3} className="border border-gray-300 p-2 text-center">Mức độ hài lòng hợp tác xã đánh giá</th>
-            </tr>
-            <tr className="bg-gray-100">
-              {Object.keys(answerValueMap).map((label, idx) => (
-                <th key={idx} className="border border-gray-300 p-2 text-center w-32">
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {questions.map((q, index) => (
-              <tr key={q.Id} className="align-top">
-                <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
-                <td className="border border-gray-300 p-2 whitespace-pre-wrap">{q.QuestionContent}</td>
-                {Object.keys(answerValueMap).map((option, idx) => (
-                  <td key={idx} className="border border-gray-300 text-center">
-                    <input
-                      type="radio"
-                      name={`question-${q.Id}`}
-                      value={option}
-                      checked={answers[q.Id] === option}
-                      disabled={isLocked}
-                      onChange={() =>
-                        setAnswers((prev) => ({ ...prev, [q.Id]: option }))
-                      }
-                    />
-                  </td>
-                ))}
-              </tr>
+  <div className="space-y-2 text-sm sm:text-base">
+    <p><strong>Tiêu đề:</strong> {survey?.Title}</p>
+    <p><strong>Mô tả:</strong> {survey?.Description}</p>
+    <p><strong>Trạng thái:</strong> {survey?.Status ? "Đang mở" : "Đã đóng"}</p>
+  </div>
+
+  <div className="mt-6 overflow-x-auto">
+    <table className="min-w-full border border-gray-300 text-sm sm:text-base">
+      <thead>
+        <tr className="bg-gray-100">
+          <th rowSpan={2} className="border border-gray-300 p-2 text-center w-12">TT</th>
+          <th rowSpan={2} className="border border-gray-300 p-2 text-center min-w-[300px] sm:min-w-[400px]">
+            Câu hỏi về mức độ hài lòng của hợp tác xã
+          </th>
+          <th colSpan={3} className="border border-gray-300 p-2 text-center">
+            Mức độ hài lòng hợp tác xã đánh giá
+          </th>
+        </tr>
+        <tr className="bg-gray-100">
+          {Object.keys(answerValueMap).map((label, idx) => (
+            <th key={idx} className="border border-gray-300 p-2 text-center w-[60px] sm:w-[100px]">
+              {label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {questions.map((q, index) => (
+          <tr key={q.Id} className="align-top">
+            <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
+            <td className="border border-gray-300 p-2 whitespace-pre-wrap min-w-[300px] sm:min-w-[400px]">
+              {q.QuestionContent}
+            </td>
+            {Object.keys(answerValueMap).map((option, idx) => (
+              <td key={idx} className="border border-gray-300 text-center w-[60px] sm:w-[100px]">
+                <input
+                  type="radio"
+                  name={`question-${q.Id}`}
+                  value={option}
+                  checked={answers[q.Id] === option}
+                  disabled={isLocked}
+                  onChange={() =>
+                    setAnswers((prev) => ({ ...prev, [q.Id]: option }))
+                  }
+                />
+              </td>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 
-      <p className="mt-6 text-sm text-red-600 font-medium">
-        Lưu ý: Sau khi nhấn "Hoàn thành khảo sát", tài khoản của bạn sẽ kết thúc nhiệm vụ và không thể đăng nhập lại.
-      </p>
+  <p className="mt-6 text-sm text-red-600 font-medium text-center sm:text-left">
+    Lưu ý: Sau khi nhấn "Hoàn thành khảo sát", tài khoản của bạn sẽ kết thúc nhiệm vụ và không thể đăng nhập lại.
+  </p>
 
-      <button
-        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl"
-        onClick={handleSubmit}
-        disabled={isLocked}
-      >
-        Hoàn thành khảo sát
-      </button>
-    </div>
+  <div className="flex justify-center sm:justify-start">
+    <button
+      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm sm:text-base"
+      onClick={handleSubmit}
+      disabled={isLocked}
+    >
+      Hoàn thành khảo sát
+    </button>
+  </div>
+</div>
+
+
   );
 }
