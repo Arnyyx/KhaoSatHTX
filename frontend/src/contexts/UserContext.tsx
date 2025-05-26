@@ -40,7 +40,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Lấy từ cookie khi load lần đầu
   useEffect(() => {
     const initializeAuth = () => {
       try {
@@ -48,7 +47,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const storedToken = Cookies.get('token')
 
         if (storedUser) {
-          // Thêm validation cho dữ liệu user
           const parsedUser = JSON.parse(storedUser)
           if (parsedUser && typeof parsedUser === 'object' && 'Id' in parsedUser) {
             setUser(parsedUser)
@@ -62,7 +60,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
-        // Clear invalid data
         Cookies.remove('user')
         Cookies.remove('token')
       } finally {

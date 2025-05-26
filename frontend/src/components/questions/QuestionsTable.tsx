@@ -64,11 +64,11 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
     const handleCreate = async (data: any) => {
         try {
             await surveyService.createQuestion({ ...data, SurveyId: surveyId });
-            toast.success("Question created successfully");
+            toast.success("Câu hỏi đã được tạo thành công");
             setIsCreateOpen(false);
             fetchQuestions();
         } catch (error) {
-            toast.error("Failed to create question");
+            toast.error("Không thể tạo câu hỏi");
         }
     };
 
@@ -76,12 +76,12 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
         if (editingQuestion) {
             try {
                 await surveyService.updateQuestion(editingQuestion.Id, data);
-                toast.success("Question updated successfully");
+                toast.success("Câu hỏi đã được cập nhật thành công");
                 setIsEditOpen(false);
                 setEditingQuestion(null);
                 fetchQuestions();
             } catch (error) {
-                toast.error("Failed to update question");
+                toast.error("Không thể cập nhật câu hỏi");
             }
         }
     };
@@ -89,10 +89,10 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
     const handleDelete = async (id: number) => {
         try {
             await surveyService.deleteQuestion(id);
-            toast.success("Question deleted successfully");
+            toast.success("Câu hỏi đã được xóa thành công");
             fetchQuestions();
         } catch (error) {
-            toast.error("Failed to delete question");
+            toast.error("Không thể xóa câu hỏi");
         }
     };
 
@@ -107,7 +107,7 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
                 <div className="relative w-full sm:w-64">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search questions..."
+                        placeholder="Tìm kiếm câu hỏi..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-8"
@@ -116,12 +116,12 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                     <DialogTrigger asChild>
                         <Button className="w-full sm:w-auto">
-                            <Plus className="mr-2 h-4 w-4" /> Create Question
+                            <Plus className="mr-2 h-4 w-4" /> Thêm câu hỏi
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Create New Question</DialogTitle>
+                            <DialogTitle>Thêm câu hỏi mới</DialogTitle>
                         </DialogHeader>
                         <QuestionForm
                             onSubmit={handleCreate}
@@ -141,8 +141,8 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[100px]">ID</TableHead>
-                                <TableHead>Question Content</TableHead>
-                                <TableHead className="w-[200px] text-right">Actions</TableHead>
+                                <TableHead>Nội dung câu hỏi</TableHead>
+                                <TableHead className="w-[200px] text-right">Thao tác</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -162,12 +162,12 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
                                                         setIsEditOpen(true);
                                                     }}
                                                 >
-                                                    Edit
+                                                    Sửa
                                                 </Button>
                                             </DialogTrigger>
                                             <DialogContent className="sm:max-w-[425px]">
                                                 <DialogHeader>
-                                                    <DialogTitle>Edit Question</DialogTitle>
+                                                    <DialogTitle>Sửa câu hỏi</DialogTitle>
                                                 </DialogHeader>
                                                 <QuestionForm
                                                     initialData={editingQuestion || undefined}
@@ -184,7 +184,7 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
                                             size="sm"
                                             onClick={() => handleDelete(question.Id)}
                                         >
-                                            Delete
+                                            Xoá
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -204,17 +204,17 @@ export function QuestionsTable({ surveyId }: QuestionsTableProps) {
                             disabled={page === 1 || isLoading}
                             onClick={() => setPage((p) => p - 1)}
                         >
-                            Previous
+                            Trước
                         </Button>
                         <span className="text-sm text-muted-foreground">
-                            Page {pagination.currentPage || 1} of {pagination.totalPages || 1}
+                            Trang {pagination.currentPage || 1} / {pagination.totalPages || 1}
                         </span>
                         <Button
                             variant="outline"
                             disabled={page === pagination.totalPages || isLoading}
                             onClick={() => setPage((p) => p + 1)}
                         >
-                            Next
+                            Sau
                         </Button>
                     </div>
                 </>

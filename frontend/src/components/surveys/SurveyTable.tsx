@@ -21,7 +21,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { SurveyForm } from "./SurveyForm";
-import { QuestionsTable } from "./QuestionsTable";
+import { QuestionsTable } from "../questions/QuestionsTable";
 import { ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -150,7 +150,7 @@ export function SurveyTable() {
         <div className="p-4">
             <div className="flex justify-between mb-4">
                 <Input
-                    placeholder="Search surveys..."
+                    placeholder="Tìm kiếm khảo sát..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="max-w-sm"
@@ -158,11 +158,11 @@ export function SurveyTable() {
                 <div className="space-x-2">
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
-                            <Button>Create Survey</Button>
+                            <Button>Tạo khảo sát</Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Create New Survey</DialogTitle>
+                                <DialogTitle>Tạo khảo sát mới</DialogTitle>
                             </DialogHeader>
                             <SurveyForm
                                 onSubmit={handleCreate}
@@ -172,7 +172,7 @@ export function SurveyTable() {
                     </Dialog>
                     {selected.length > 0 && (
                         <Button variant="destructive" onClick={handleDeleteMultiple}>
-                            Delete Selected ({selected.length})
+                            Xoá đã chọn ({selected.length})
                         </Button>
                     )}
                 </div>
@@ -200,7 +200,7 @@ export function SurveyTable() {
                                 onClick={() => handleSort("Title")}
                                 className="flex items-center space-x-1"
                             >
-                                <span>Title</span>
+                                <span>Tiêu đề</span>
                                 <ArrowUpDown className="h-4 w-4" />
                             </Button>
                         </TableHead>
@@ -210,7 +210,7 @@ export function SurveyTable() {
                                 onClick={() => handleSort("Description")}
                                 className="flex items-center space-x-1"
                             >
-                                <span>Description</span>
+                                <span>Mô tả</span>
                                 <ArrowUpDown className="h-4 w-4" />
                             </Button>
                         </TableHead>
@@ -220,7 +220,7 @@ export function SurveyTable() {
                                 onClick={() => handleSort("StartTime")}
                                 className="flex items-center space-x-1"
                             >
-                                <span>Start Time</span>
+                                <span>Thời gian bắt đầu</span>
                                 <ArrowUpDown className="h-4 w-4" />
                             </Button>
                         </TableHead>
@@ -230,7 +230,7 @@ export function SurveyTable() {
                                 onClick={() => handleSort("EndTime")}
                                 className="flex items-center space-x-1"
                             >
-                                <span>End Time</span>
+                                <span>Thời gian kết thúc</span>
                                 <ArrowUpDown className="h-4 w-4" />
                             </Button>
                         </TableHead>
@@ -240,12 +240,12 @@ export function SurveyTable() {
                                 onClick={() => handleSort("Status")}
                                 className="flex items-center space-x-1"
                             >
-                                <span>Status</span>
+                                <span>Trạng thái</span>
                                 <ArrowUpDown className="h-4 w-4" />
                             </Button>
                         </TableHead>
                         <TableHead>Phân quyền</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>Hành động</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -284,7 +284,7 @@ export function SurveyTable() {
                                             variant={survey.Status ? "default" : "destructive"}
                                             className={survey.Status ? "bg-green-500" : "bg-red-500"}
                                         >
-                                            {survey.Status ? "Active" : "Inactive"}
+                                            {survey.Status ? "Hoạt động" : "Không hoạt động"}
                                         </Badge>
                                     </TableCell>
                                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -297,7 +297,7 @@ export function SurveyTable() {
                                                     variant="outline"
                                                     onClick={() => setEditingSurvey(survey)}
                                                 >
-                                                    Edit
+                                                    Sửa
                                                 </Button>
                                             </DialogTrigger>
                                             <DialogContent>
@@ -319,14 +319,14 @@ export function SurveyTable() {
                                             onClick={() => handleDelete(survey.Id)}
                                             className="ml-2"
                                         >
-                                            Delete
+                                            Xoá
                                         </Button>
                                     </TableCell>
                                 </TableRow>
                             </DialogTrigger>
                             <DialogContent className="max-w-4xl">
                                 <DialogHeader>
-                                    <DialogTitle>Questions for {survey.Title}</DialogTitle>
+                                    <DialogTitle>Câu hỏi của khảo sát: {survey.Title}</DialogTitle>
                                 </DialogHeader>
                                 <QuestionsTable surveyId={survey.Id} />
                             </DialogContent>
@@ -340,16 +340,16 @@ export function SurveyTable() {
                     disabled={page === 1}
                     onClick={() => setPage((p) => p - 1)}
                 >
-                    Previous
+                    Trang trước
                 </Button>
                 <span>
-                    Page {pagination.currentPage} of {pagination.totalPages}
+                    Trang {pagination.currentPage} / {pagination.totalPages}
                 </span>
                 <Button
                     disabled={page === pagination.totalPages}
                     onClick={() => setPage((p) => p + 1)}
                 >
-                    Next
+                    Trang tiếp
                 </Button>
             </div>
         </div>

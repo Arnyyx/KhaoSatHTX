@@ -488,7 +488,7 @@ export function UnionTable() {
                 fileInputRef.current.value = "";
             }
 
-    
+
             if (response.duplicateUsernames && response.duplicateUsernames.length > 0) {
                 toast.error("Lỗi trùng username", {
                     description: `Các username sau đã tồn tại trong hệ thống: ${response.duplicateUsernames.join(', ')}`
