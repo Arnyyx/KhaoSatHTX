@@ -56,7 +56,7 @@ export default function SurveyPage() {
       } finally {
         setLoading(false);
       }
-    };
+    };  
 
     fetchData();
   }, []);

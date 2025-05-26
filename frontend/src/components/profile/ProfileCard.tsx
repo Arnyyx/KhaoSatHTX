@@ -112,7 +112,7 @@ export function ProfileCard({ user, isAdmin = false }: ProfileCardProps) {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push("/survey")}
+                            onClick={() => router.push("/surveys_list")}
                             className="flex items-center gap-2"
                         >
                             <FileText className="h-4 w-4" />
