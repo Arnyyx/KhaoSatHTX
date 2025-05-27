@@ -118,9 +118,7 @@ export default function SurveyPage() {
       if (!res.ok) throw new Error("Gửi khảo sát thất bại.");
 
       alert("Khảo sát đã được gửi. Cảm ơn bạn!");
-      Cookies.remove("user");
-      Cookies.remove("ID_user");
-      router.push("/login");
+      router.push("/surveys_list");
     } catch (err: any) {
       console.error("❌ Lỗi khi gửi khảo sát:", err);
       alert("Đã xảy ra lỗi khi gửi khảo sát.");

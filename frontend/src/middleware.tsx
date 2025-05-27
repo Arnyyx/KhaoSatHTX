@@ -7,7 +7,7 @@ const protectedRoutes = {
   '/provinces': ['admin'],
   '/wards': ['admin'],
   '/union': ['LMHTX'],
-  '/survey': ['HTX', 'QTD'],
+  '/surveys_list': ['HTX', 'QTD'],
   '/profile': ['HTX', 'QTD', 'LMHTX', 'admin'],
 }
 
@@ -64,7 +64,7 @@ export const config = {
     '/provinces/:path*',
     '/wards/:path*',
     '/union/:path*',
-    '/survey/:path*',
+    '/surveys_list/:path*',
     '/profile/:path*',
     '/login',
   ],

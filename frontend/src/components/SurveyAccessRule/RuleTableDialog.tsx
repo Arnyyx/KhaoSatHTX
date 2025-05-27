@@ -168,7 +168,7 @@ export function RuleTableDialog({SurveyId}: SurveyFormProps) {
     };
     useEffect(() => {
         fetchInfo();
-    }, [accessRule]);
+    }, []);
     return (
         <Dialog open={ruleDialogOpen} onOpenChange={(isOpen) => {
             setRuleDialogOpen(isOpen)
