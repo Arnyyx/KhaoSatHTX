@@ -79,6 +79,7 @@ export function DatePicker<T extends FormValues>({
                     mode="single"
                     selected={field.value instanceof Date ? field.value : undefined}
                     onSelect={(date) => {
+                      console.log(date);
                       if (!date) return;
                       const newDate = new Date(date);
                       if (field.value instanceof Date && showTimePicker) {

@@ -13,13 +13,15 @@ import {
     Legend
 } from "recharts"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 
 interface QuestionStats {
     QuestionId: number
     QuestionContent: string
     SurveyId: number
     SurveyTitle: string
+    Role: string
+    Type: string
     NotSatisfied: number
     PartiallySatisfied: number
     Satisfied: number
@@ -31,7 +33,9 @@ interface QuestionStats {
 
 interface Survey {
     Id: number
-    Title: string
+    Title: string   
+    Role: string
+    Type: string
 }
 
 interface PaginationInfo {
@@ -94,6 +98,11 @@ export default function DashboardQuestions() {
             const response = await fetch(`${API.surveys}/question-stats?${queryParams.toString()}`);
             const data = await response.json();
             setStats(data.stats);
+            setStats(data.stats.map((stat: QuestionStats) => ({
+                ...stat,
+                Role: surveys.find(survey => survey.Id === stat.SurveyId)?.Role,
+                Type: surveys.find(survey => survey.Id === stat.SurveyId)?.Type
+            })));
             setPagination({
                 total: data.total,
                 page: data.page,
@@ -147,7 +156,7 @@ export default function DashboardQuestions() {
                     <SelectContent>
                         {surveys.map((survey) => (
                             <SelectItem key={survey.Id} value={survey.Id.toString()}>
-                                {survey.Title}
+                                {survey.Role==="QTD" ? "Quỹ tín dụng" : survey.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : survey.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định"}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -228,14 +237,53 @@ export default function DashboardQuestions() {
 
             <Card className="mt-6">
                 <CardHeader>
-                    <CardTitle>Chi tiết câu trả lời</CardTitle>
+                    <div className="flex justify-between items-center">
+                        <CardTitle>Chi tiết câu trả lời</CardTitle>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                                try {
+                                    const queryParams = new URLSearchParams({
+                                        year: year.toString()
+                                    });
+                                    
+                                    if (selectedSurvey) {
+                                        queryParams.append('survey_id', selectedSurvey);
+                                    }
+                                    if (Cookies.get("userRole") === "LMHTX") {
+                                        queryParams.append('province_id', Cookies.get("provinceId") || "");
+                                    }
+                                    
+                                    const response = await fetch(`${API.surveys}/question-stats/export?${queryParams.toString()}`);
+                                    if (!response.ok) throw new Error('Export failed');
+                                    
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `question-answer-stats-${year}.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    document.body.removeChild(a);
+                                } catch (error) {
+                                    console.error("Error exporting:", error);
+                                    toast.error("Lỗi khi xuất file Excel");
+                                }
+                            }}
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Xuất Excel
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b">
-                                    <th className="text-left p-2">Khảo sát</th>
+                                    <th className="text-left p-2">Lĩnh vực</th>
                                     <th className="text-left p-2">Câu hỏi</th>
                                     <th className="text-left p-2">Không hài lòng</th>
                                     <th className="text-left p-2">Chưa hoàn toàn hài lòng</th>
@@ -246,7 +294,7 @@ export default function DashboardQuestions() {
                             <tbody>
                                 {stats.map((stat) => (
                                     <tr key={stat.QuestionId} className="border-b">
-                                        <td className="p-2">{stat.SurveyTitle}</td>
+                                        <td className="p-2">{stat.Role==="QTD" ? "Quỹ tín dụng" : stat.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : stat.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định"}</td>
                                         <td className="p-2">{stat.QuestionContent}</td>
                                         <td className="p-2">{stat.NotSatisfiedPercent}% ({stat.NotSatisfied})</td>
                                         <td className="p-2">{stat.PartiallySatisfiedPercent}% ({stat.PartiallySatisfied})</td>

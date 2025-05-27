@@ -16,8 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Config } from "@/lib/config"
 import { Download } from "lucide-react"
 
+interface Province {
+    Id: number
+    Name: string
+}
 type SurveyInfo = {
     Id: number
+    Role: string
+    Type: string
     Title: string
     Description: string
     StartTime: string
@@ -54,15 +60,26 @@ export default function DashboardProgress() {
     const year = Number(searchParams.get("year")) || new Date().getFullYear();
     const [surveyInfo, setSurveyInfo] = useState<SurveyInfo[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [provinceList, setProvinceList] = useState<Province[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [isMemberFilter, setIsMemberFilter] = useState<string>("all");
-    const [surveyStatusFilter, setSurveyStatusFilter] = useState<string>("all");
+    const [provinceFilter, setProvinceFilter] = useState<string>();
+    const [isMemberFilter, setIsMemberFilter] = useState<string>();
+    const [surveyStatusFilter, setSurveyStatusFilter] = useState<string>();
 
+    useEffect(() => {
+        fetchProvince();
+    }, []);
     useEffect(() => {
         fetchSurveyProgress();
         fetchUsers();
-    }, [year, currentPage, isMemberFilter, surveyStatusFilter]);
+    }, [year, currentPage, isMemberFilter, surveyStatusFilter, provinceFilter, provinceList]);
+
+    const fetchProvince = async () => {
+        const provinceRes = await fetch(`${API.provinces}`);
+        const provinceData = await provinceRes.json();
+        setProvinceList(provinceData.items);
+    };
 
     const fetchSurveyProgress = async () => {
         try {
@@ -70,8 +87,11 @@ export default function DashboardProgress() {
                 year: year.toString()
             });
             
-            if (isMemberFilter !== "all") {
+            if (isMemberFilter !== "all" && isMemberFilter !== undefined) {
                 queryParams.append('is_member', isMemberFilter);
+            }
+            if (provinceFilter !== "all" && provinceFilter !== undefined) {
+                queryParams.append('province_id', provinceFilter);
             }
             if (Cookies.get("userRole") === "LMHTX") {
                 queryParams.append('province_id', Cookies.get("provinceId") || "");
@@ -93,11 +113,13 @@ export default function DashboardProgress() {
                 year: year.toString()
             });
             
-            if (isMemberFilter !== "all") {
+            if (isMemberFilter !== "all" && isMemberFilter !== undefined) {
                 queryParams.append('is_member', isMemberFilter);
             }
-
-            if (surveyStatusFilter !== "all") {
+            if (provinceFilter !== "all" && provinceFilter !== undefined) {
+                queryParams.append('province_id', provinceFilter);
+            }
+            if (surveyStatusFilter !== "all" && surveyStatusFilter !== undefined) {
                 queryParams.append('survey_status', surveyStatusFilter);
             }
             if (Cookies.get("userRole") === "LMHTX") {
@@ -136,7 +158,7 @@ export default function DashboardProgress() {
 
     const handleExportProgress = async () => {
         try {
-            const query = Cookies.get("userRole") === "LMHTX" ? `&province_id=${Cookies.get("provinceId")}` : "";
+            const query = Cookies.get("userRole") === "LMHTX" ? `&province_id=${Cookies.get("provinceId")}` : (provinceFilter !== "all" && provinceFilter !== undefined ? `&province_id=${provinceFilter}` : "");
             const response = await fetch(`${API.surveys}/progress/export?year=${year}${query}`, {
                 method: 'GET',
             });
@@ -164,8 +186,11 @@ export default function DashboardProgress() {
                 year: year.toString()
             });
             
-            if (isMemberFilter !== "all") {
+            if (isMemberFilter !== "all" && isMemberFilter !== undefined) { 
                 queryParams.append('is_member', isMemberFilter);
+            }
+            if (provinceFilter !== "all" && provinceFilter !== undefined) {
+                queryParams.append('province_id', provinceFilter);
             }
             if (Cookies.get("userRole") === "LMHTX") {
                 queryParams.append('province_id', Cookies.get("provinceId") || "");
@@ -297,20 +322,20 @@ export default function DashboardProgress() {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b">
-                                    <th className="text-left p-2">Tên khảo sát</th>
+                                    <th className="text-left p-2">Lĩnh vực</th>
                                     <th className="text-left p-2">Số người đã tham gia</th>
                                     <th className="text-left p-2">Tổng số người</th>
                                     <th className="text-left p-2">Tỷ lệ hoàn thành</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {surveyInfo.map((survey) => (
-                                    <tr key={survey.Id} className="border-b">
-                                        <td className="p-2">{survey.Title}</td>
-                                        <td className="p-2">{survey.finishedNum}</td>
-                                        <td className="p-2">{survey.totalNum}</td>
+                                {surveyInfo.map((item) => (
+                                    <tr key={item.Id} className="border-b">
+                                        <td className="p-2">{item.Role==="QTD" ? "Quỹ tín dụng" : item.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : item.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định"}</td>
+                                        <td className="p-2">{item.finishedNum}</td>
+                                        <td className="p-2">{item.totalNum} </td>
                                         <td className="p-2">
-                                            {((survey.finishedNum / survey.totalNum) * 100).toFixed(1)}%
+                                            {((item.finishedNum / item.totalNum) * 100).toFixed(1)}%
                                         </td>
                                     </tr>
                                 ))}
@@ -326,6 +351,23 @@ export default function DashboardProgress() {
                         <CardTitle>Danh sách người dùng</CardTitle>
                         <div className="flex items-center gap-4">
                             <Select
+                                value={provinceFilter}
+                                onValueChange={(value) => {
+                                    setProvinceFilter(value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Tỉnh/Thành phố" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả</SelectItem>
+                                    {provinceList.map((province) => (
+                                        <SelectItem key={province.Id} value={province.Id.toString()}>{province.Name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select
                                 value={isMemberFilter}
                                 onValueChange={(value) => {
                                     setIsMemberFilter(value);
@@ -333,7 +375,7 @@ export default function DashboardProgress() {
                                 }}
                             >
                                 <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Lọc theo thành viên" />
+                                    <SelectValue placeholder="Thành viên" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Tất cả</SelectItem>

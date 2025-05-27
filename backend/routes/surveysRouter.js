@@ -8,6 +8,7 @@ router.get("/", surveyController.getAllSurveys);
 router.get("/progress", surveyController.getSurveysProgress);
 router.get("/progress/export", surveyController.exportSurveysProgress);
 router.get("/question-stats", surveyController.getQuestionAnswerStats);
+router.get("/question-stats/export", surveyController.exportQuestionAnswerStats);
 router.get("/by_role", surveyController.getSurveysByRole);
 router.get("/access_rule/:survey_id", surveyController.getSurveyAccessRulesBySurvey);
 router.get("/access_rule", surveyController.getSurveyAccessRules);

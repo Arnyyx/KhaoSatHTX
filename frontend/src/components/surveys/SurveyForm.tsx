@@ -105,12 +105,19 @@ export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps)
                     name="StartTime"
                     render={({ field }) => (
                         <FormItem className="space-y-2">
-                            <DatePicker
+                            {/* <DatePicker
                                 control={form.control}
                                 name="StartTime"
                                 label="Thời gian bắt đầu"
                                 showTimePicker={false} // Chỉ chọn ngày
-                            />
+                            /> */}
+                            
+                            <input
+                                type="datetime-local"// Thêm class tùy chỉnh nếu muốn
+                                name="StartTime"
+                                value={format(field.value, "yyyy-MM-dd'T'HH:mm")}
+                                onChange={(e) => field.onChange(new Date(e.target.value))}
+                                />
                             <div className="text-xs text-gray-500 mt-1">
                                 Thời gian hiện tại: {format(field.value, "HH:mm dd/MM/yyyy", { locale: vi })}
                             </div>
@@ -124,12 +131,19 @@ export function SurveyForm({ initialData, onSubmit, onCancel }: SurveyFormProps)
                     name="EndTime"
                     render={({ field }) => (
                         <FormItem className="space-y-2">
-                            <DatePicker
+                            {/* <DatePicker
                                 control={form.control}
                                 name="EndTime"
                                 label="Thời gian kết thúc"
                                 showTimePicker={true} // Chọn ngày và giờ
-                            />
+                            /> */}
+                            
+                            <input
+                                type="datetime-local"// Thêm class tùy chỉnh nếu muốn
+                                name="EndTime"
+                                value={format(field.value, "yyyy-MM-dd'T'HH:mm")}
+                                onChange={(e) => field.onChange(new Date(e.target.value))}
+                                />
                             <div className="text-xs text-gray-500 mt-1">
                                 Thời gian hiện tại: {format(field.value, "HH:mm dd/MM/yyyy", { locale: vi })}
                             </div>

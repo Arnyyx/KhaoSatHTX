@@ -352,7 +352,7 @@ exports.exportSurveysProgress = async (req, res) => {
 
         // Add headers
         worksheet.columns = [
-            { header: 'Tên khảo sát', key: 'Title', width: 30 },
+            { header: 'Lĩnh vực', key: 'Role', width: 30 },
             { header: 'Mô tả', key: 'Description', width: 40 },
             { header: 'Thời gian bắt đầu', key: 'StartTime', width: 20 },
             { header: 'Thời gian kết thúc', key: 'EndTime', width: 20 },
@@ -366,6 +366,7 @@ exports.exportSurveysProgress = async (req, res) => {
         surveys.forEach(survey => {
             worksheet.addRow({
                 ...survey,
+                Role: survey.Role==="QTD" ? "Quỹ tín dụng" : survey.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : survey.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định",
                 completionRate: ((survey.finishedNum / survey.totalNum) * 100).toFixed(2) + '%'
             });
         });
@@ -425,7 +426,7 @@ exports.getQuestionAnswerStats = async (req, res) => {
             FROM Questions
             JOIN Surveys ON Questions.SurveyId = Surveys.Id
             LEFT JOIN Results ON Questions.Id = Results.QuestionId
-            LEFT JOIN Users ON Results.UserId = Users.Id
+            JOIN Users ON Results.UserId = Users.Id
             WHERE ${whereClause}
             GROUP BY 
                 Questions.Id, Questions.QuestionContent, 
@@ -454,5 +455,97 @@ exports.getQuestionAnswerStats = async (req, res) => {
     } catch (error) {
         console.error("Error in getQuestionAnswerStats:", error);
         res.status(400).json({ message: "Lỗi khi lấy thống kê câu trả lời", error: error.message });
+    }
+};
+
+exports.exportQuestionAnswerStats = async (req, res) => {
+    try {
+        const { year, survey_id, province_id } = req.query;
+
+        if (!year && !survey_id) {
+            return res.status(400).json({ message: "Cần truyền 'year' hoặc 'survey_id'" });
+        }
+
+        const whereClause = survey_id 
+            ? `Questions.SurveyId = ${survey_id}` 
+            : `YEAR(Surveys.StartTime) = ${year}`;
+
+        const province_value = province_id ? ` AND Users.ProvinceId = ${province_id}` : '';
+
+        const stats = await sequelize.query(`
+            SELECT 
+                Questions.Id AS QuestionId,
+                Questions.QuestionContent,
+                Surveys.Id AS SurveyId,
+                Surveys.Title AS SurveyTitle,
+                COUNT(CASE WHEN Results.Answer = 1${province_value} THEN 1 END) AS NotSatisfied,
+                COUNT(CASE WHEN Results.Answer = 3${province_value} THEN 1 END) AS PartiallySatisfied,
+                COUNT(CASE WHEN Results.Answer = 5${province_value} THEN 1 END) AS Satisfied,
+                COUNT(CASE WHEN Users.Address LIKE '%%'${province_value} THEN 1 END) AS TotalAnswers
+            FROM Questions
+            JOIN Surveys ON Questions.SurveyId = Surveys.Id
+            LEFT JOIN Results ON Questions.Id = Results.QuestionId
+            JOIN Users ON Results.UserId = Users.Id
+            WHERE ${whereClause}
+            GROUP BY 
+                Questions.Id, Questions.QuestionContent, 
+                Surveys.Id, Surveys.Title
+            ORDER BY 
+                Surveys.Id, Questions.Id
+        `, { type: sequelize.QueryTypes.SELECT });
+
+        // Calculate percentages
+        const statsWithPercentages = stats.map(stat => ({
+            ...stat,
+            NotSatisfiedPercent: stat.TotalAnswers > 0 ? ((stat.NotSatisfied / stat.TotalAnswers) * 100).toFixed(1) : 0,
+            PartiallySatisfiedPercent: stat.TotalAnswers > 0 ? ((stat.PartiallySatisfied / stat.TotalAnswers) * 100).toFixed(1) : 0,
+            SatisfiedPercent: stat.TotalAnswers > 0 ? ((stat.Satisfied / stat.TotalAnswers) * 100).toFixed(1) : 0
+        }));
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Chi tiết câu trả lời');
+
+        // Add headers
+        worksheet.columns = [
+            { header: 'Lĩnh vực', key: 'Role', width: 30 },
+            { header: 'Câu hỏi', key: 'QuestionContent', width: 50 },
+            { header: 'Không hài lòng', key: 'NotSatisfied', width: 20 },
+            { header: 'Không hài lòng (%)', key: 'NotSatisfiedPercent', width: 20 },
+            { header: 'Chưa hoàn toàn hài lòng', key: 'PartiallySatisfied', width: 25 },
+            { header: 'Chưa hoàn toàn hài lòng (%)', key: 'PartiallySatisfiedPercent', width: 25 },
+            { header: 'Hài lòng', key: 'Satisfied', width: 20 },
+            { header: 'Hài lòng (%)', key: 'SatisfiedPercent', width: 20 },
+            { header: 'Tổng số câu trả lời', key: 'TotalAnswers', width: 20 }
+        ];
+
+        // Add data rows
+        statsWithPercentages.forEach(stat => {
+            worksheet.addRow({
+                Role: stat.Role==="QTD" ? "Quỹ tín dụng" : stat.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : stat.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định",
+                QuestionContent: stat.QuestionContent,
+                NotSatisfied: stat.NotSatisfied,
+                NotSatisfiedPercent: stat.NotSatisfiedPercent + '%',
+                PartiallySatisfied: stat.PartiallySatisfied,
+                PartiallySatisfiedPercent: stat.PartiallySatisfiedPercent + '%',
+                Satisfied: stat.Satisfied,
+                SatisfiedPercent: stat.SatisfiedPercent + '%',
+                TotalAnswers: stat.TotalAnswers
+            });
+        });
+
+        // Style the header row
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=question-answer-stats-${year || survey_id}.xlsx`);
+
+        // Write to response
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error("Error in exportQuestionAnswerStats:", error);
+        res.status(400).json({ message: "Lỗi khi xuất file Excel", error: error.message });
     }
 };

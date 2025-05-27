@@ -360,9 +360,9 @@ export default function DashboardYear() {
             </div>
             {surveyInfo.map((item) => (
                 <Card className="mb-2" key={item.Id}>
-                    <CardHeader><b>{item.Title}</b></CardHeader>
+                    <CardHeader><b>Lĩnh vực: {item.Role==="QTD" ? "Quỹ tín dụng" : item.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : item.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định"}</b></CardHeader>
                     <CardContent>
-                        <div className="text-red-500">Lĩnh vực: {item.Role==="QTD" ? "Quỹ tín dụng" : item.Type==="PNN" ? "Hợp tác xã Phi Nông Nghiệp" : item.Type==="NN" ? "Hợp tác xã Nông nghiệp" : "Không xác định"}</div>  
+                        <div>{item.Title}</div>  
                         <div>Bắt đầu: {new Date(item.StartTime).toLocaleString()} - Kết thúc: {new Date(item.EndTime).toLocaleString()}</div>
                         <div>Tiến độ: {item.finishedNum}/{item.totalNum}</div>
                         {item.totalNum === 0 ? <div className="text-red-400">Khảo sát chưa được phân nhóm, vui lòng Truy cập <a href="/admin/surveys" className="text-blue-400 hover:underline">Quản lý Khảo sát</a> để phân nhóm</div> :
