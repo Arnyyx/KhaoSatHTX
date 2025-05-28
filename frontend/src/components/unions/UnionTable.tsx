@@ -20,6 +20,7 @@ import {
     DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,13 +35,16 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { UnionForm } from "./UnionForm";
 import { User } from "@/types/user";
+import { API } from "@/lib/api"
 import { userService, wardService } from "@/lib/api";
 import Cookies from "js-cookie";
 import * as XLSX from 'xlsx';
 import { z } from 'zod';
 import { excelUtils } from "../../lib/excel-utils";
+import { Lock } from "lucide-react"
 
 export function UnionTable() {
+    const year = new Date().getFullYear();
     const [users, setUsers] = useState<User[]>([]);
     const [pagination, setPagination] = useState<any>({});
     const [page, setPage] = useState(1);
@@ -51,6 +55,7 @@ export function UnionTable() {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isViewOpen, setIsViewOpen] = useState(false);
+        const router = useRouter();
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [viewingUser, setViewingUser] = useState<User | null>(null);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -696,6 +701,35 @@ export function UnionTable() {
                     </DropdownMenu>
                 </div>
                 <div className="flex space-x-2">
+                    { Cookies.get("userRole") === "LMHTX" ? 
+                    <Button
+                        onClick={async () => {
+                            const confirmEnd = window.confirm(`Bạn có chắc chắn muốn kết thúc khảo sát năm ${year}? Các Thành viên HTX thuộc tỉnh của bạn sẽ không thể tham gia khảo sát nữa.`);
+                            if (confirmEnd) {
+                                try {
+                                const res = await fetch(`${API.users}/lock`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ province_id: Cookies.get("provinceId") , year: year, user_id: Cookies.get("userId") }),
+                                });
+                                const data = await res.json();
+                                toast.success(data.message || "Khảo sát đã được kết thúc thành công.");
+                                // Refresh the page to reflect changes
+                                router.refresh();
+                                } catch (error) {
+                                    console.error("Error ending survey:", error);
+                                    toast.error("Lỗi khi kết thúc khảo sát.");
+                                }
+                            }   
+                        }}
+                        className="flex items-center gap-2"
+                    >
+                        <Lock className="h-4 w-4" />
+                        Kết thúc khảo sát năm {year}
+                    </Button>
+                    : null}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline">

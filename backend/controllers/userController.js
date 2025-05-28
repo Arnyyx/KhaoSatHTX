@@ -1084,3 +1084,58 @@ exports.getUserSurveyStatus = async (req, res) => {
         console.error("Error in getSurveyStatus:", error);
     }
 }
+exports.lockUserSurveyByProvince = async (req, res) => {
+    try {
+        const { province_id, year, user_id } = req.body;
+
+        if (!province_id || !year) {
+            return res.status(400).json({ message: "Cần truyền province_id và year" });
+        }
+
+        const users = await User.findAll({
+            where: {
+                ProvinceId: province_id,
+                Role: ['HTX', 'QTD', 'LMHTX']
+            }
+        });
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng nào trong tỉnh này" });
+        }
+        const survey = await Survey.findAll({
+            where: {
+                StartTime: {
+                    [Op.gte]: new Date(`${year}-01-01`),
+                    [Op.lt]: new Date(`${year + 1}-01-01`)
+                }
+            },
+            attributes: ['Id']
+        });
+
+        if (!survey || survey.length === 0) {
+            return res.status(404).json({ message: "Không tìm thấy khảo sát cho năm này" });
+        }
+
+        const survey_id = survey.map(s => s.Id);
+        const whereCondition = {
+            [Op.or]: [
+                {
+                    [Op.and]: [
+                        { UserId: { [Op.in]: users.map(u => u.Id) } },
+                        { SurveyId: { [Op.in]: survey_id } }
+                    ]
+                },
+                { UserId: user_id }
+            ]
+        };
+
+        await UserSurveyStatus.update(
+            { IsLocked: true },
+            { where: whereCondition }
+        );
+        res.status(200).json({ message: "Đã khóa khảo sát cho tất cả người dùng trong tỉnh" });
+    } catch (error) {
+        console.error("Error in lockUserSurveyByProvince:", error);
+        res.status(500).json({ message: "Lỗi khi khóa khảo sát", error: error.message });
+    }
+}

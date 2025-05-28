@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Config } from "@/lib/config"
-import { Download } from "lucide-react"
+import { Download, Lock } from "lucide-react"
 
 interface Province {
     Id: number
@@ -237,6 +237,35 @@ export default function DashboardProgress() {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Tiến độ khảo sát năm {year}</h1>
+                { Cookies.get("userRole") === "LMHTX" ? 
+                <Button
+                    onClick={async () => {
+                        const confirmEnd = window.confirm("Bạn có chắc chắn muốn kết thúc khảo sát? Các Thành viên HTX thuộc tỉnh của bạn sẽ không thể tham gia khảo sát nữa.");
+                        if (confirmEnd) {
+                            try {
+                            const res = await fetch(`${API.users}/lock`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ province_id: Cookies.get("provinceId") , year: year, user_id: Cookies.get("userId") }),
+                            });
+                            const data = await res.json();
+                            toast.success(data.message || "Khảo sát đã được kết thúc thành công.");
+                            // Refresh the page to reflect changes
+                            router.refresh();
+                            } catch (error) {
+                                console.error("Error ending survey:", error);
+                                toast.error("Lỗi khi kết thúc khảo sát.");
+                            }
+                        }   
+                    }}
+                    className="flex items-center gap-2"
+                >
+                    <Lock className="h-4 w-4" />
+                    Kết thúc khảo sát
+                </Button>
+                : null}
                 <Button onClick={handleExportProgress} className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Xuất Excel
